@@ -11,7 +11,7 @@ const LandingPage = () => {
     image: "/logos/knight.jpg"
   };
 
-  const totalDuration = 10000; // 15 seconds in milliseconds
+  const totalDuration = 5000; // 5 seconds in milliseconds
   const updateInterval = 50; // Update every 50ms for smooth progress
 
   useEffect(() => {
