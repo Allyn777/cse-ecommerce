@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ProductDisplay from './ProductDisplay';
 import { getValidationErrors } from '../utils/validation';
 import { useAuth } from '../contexts/AuthContext';
 
-const Login = ({ onSwitchToSignup }) => {
+const Login = () => {
+  const navigate = useNavigate();
   const { signIn, resetPassword } = useAuth();
   const [formData, setFormData] = useState({
     login: '',
@@ -161,7 +163,7 @@ const Login = ({ onSwitchToSignup }) => {
                   <p className="text-gray-300 text-sm">
                     Don't have account?{' '}
                     <button
-                      onClick={onSwitchToSignup}
+                      onClick={() => navigate('/signup')}
                       className="text-white hover:text-blue-400 transition-colors font-medium"
                     >
                       Sign Up

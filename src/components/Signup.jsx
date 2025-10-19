@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ProductDisplay from './ProductDisplay';
 import { getValidationErrors } from '../utils/validation';
 import { useAuth } from '../contexts/AuthContext';
 
-const Signup = ({ onSwitchToLogin }) => {
+const Signup = () => {
+  const navigate = useNavigate();
   const { signUp } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -171,7 +173,7 @@ const Signup = ({ onSwitchToLogin }) => {
                   <p className="text-gray-300 text-sm">
                     Already have an account?{' '}
                     <button
-                      onClick={onSwitchToLogin}
+                      onClick={() => navigate('/login')}
                       className="text-white hover:text-blue-400 transition-colors font-medium"
                     >
                       Sign in

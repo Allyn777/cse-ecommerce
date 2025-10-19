@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 import LandingPage from './components/LandingPage'
@@ -7,11 +7,9 @@ import Signup from './components/Signup'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 
 function AppContent() {
-  const { user, loading } = useAuth()
-  const [currentView, setCurrentView] = useState('login')
-
-  const switchToSignup = () => setCurrentView('signup')
-  const switchToLogin = () => setCurrentView('login')
+  // Temporarily disable auth for testing
+  const user = null
+  const loading = false
 
   if (loading) {
     return (
@@ -44,11 +42,11 @@ function AppContent() {
         <Route path="/" element={<LandingPage />} />
         <Route 
           path="/login" 
-          element={<Login onSwitchToSignup={switchToSignup} />} 
+          element={<Login />} 
         />
         <Route 
           path="/signup" 
-          element={<Signup onSwitchToLogin={switchToLogin} />} 
+          element={<Signup />} 
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
