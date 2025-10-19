@@ -8,7 +8,7 @@ const LandingPage = () => {
   const logo = {
     id: 1,
     name: "CSE",
-    image: "/logos/knight.jpg"
+    image: "/logos/final.png"
   };
 
   const totalDuration = 5000; // 5 seconds in milliseconds
@@ -43,7 +43,7 @@ const LandingPage = () => {
           <img
             src={logo.image}
             alt={logo.name}
-            className="w-full h-full object-contain logo-jump logo-glow"
+            className="w-full h-full object-contain logo-spin-right logo-glow"
             style={{
               mixBlendMode: 'screen',
               background: 'transparent'
