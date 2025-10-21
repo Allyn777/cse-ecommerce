@@ -11,7 +11,6 @@ const LandingPage = () => {
     { id: 4, name: "Logo 4", image: "/logos/twins.jpeg" },
     { id: 3, name: "Logo 3", image: "/logos/hayabusa.jpeg" },
     { id: 5, name: "Logo 5", image: "/logos/wesing.jpeg" },
-    
   ];
 
   const totalDuration = 6000; // 10 seconds total
@@ -46,15 +45,26 @@ const LandingPage = () => {
       clearInterval(progressTimer);
       clearInterval(logoTimer);
     };
-  }, [navigate]);
+  }, [navigate, logos.length, perLogoDuration]);
 
   return (
-    <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0D0D0D] flex flex-col items-center justify-center p-4">
+      {/* Header */}
+      <div className="flex items-center space-x-2 mb-8">
+        <h1 className="text-lg font-semibold text-white">Welcome to Fighting Gears</h1>
+        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+          <span className="text-black font-bold text-sm">
+            <img src="/logos/boxing.png" alt="Gloves" className="w-6 h-6" />
+          </span>
+        </div>
+      </div>
+      
+      {/* Main content */}
       <div className="text-center w-full max-w-6xl">
         {/* Logo container */}
         <div className="relative w-[50vw] h-[50vw] max-w-[400px] max-h-[400px] mb-8 mx-auto overflow-hidden">
           <img
-            key={currentLogoIndex} // important to re-trigger animation
+            key={currentLogoIndex}
             src={logos[currentLogoIndex].image}
             alt={logos[currentLogoIndex].name}
             className="w-full h-full object-contain logo-spin-right logo-glow"
@@ -65,38 +75,33 @@ const LandingPage = () => {
           />
         </div>
 
-        {/* Circular Progress */}
+        {/* Circular Progress - No numbers, just white filling on black */}
         <div className="w-full max-w-md mx-auto flex flex-col items-center">
           <div className="relative w-32 h-32 mb-4">
             <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+              {/* Background circle - black */}
               <circle
                 cx="50"
                 cy="50"
                 r="45"
-                stroke="rgb(55, 65, 81)"
+                stroke="#000000"
                 strokeWidth="8"
                 fill="transparent"
-                className="opacity-30"
               />
+              {/* Progress circle - white filling */}
               <circle
                 cx="50"
                 cy="50"
                 r="45"
-                stroke="white"
+                stroke="#FFFFFF"
                 strokeWidth="8"
                 fill="transparent"
                 strokeLinecap="round"
                 strokeDasharray={`${2 * Math.PI * 45}`}
                 strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
-                className="transition-all duration-100 ease-linear drop-shadow-lg"
+                className="transition-all duration-100 ease-linear"
               />
             </svg>
-
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white text-lg font-bold">
-                {Math.round(progress)}%
-              </span>
-            </div>
           </div>
 
           <div className="text-gray-300 text-sm font-medium">Loading...</div>

@@ -40,7 +40,7 @@ const Signup = () => {
         if (error) {
           setErrors({ general: error.message });
         } else {
-          setSuccessMessage('Account created successfully! Please check your email to verify your account.');
+          setSuccessMessage('Account created successfully! Redirecting to login...');
           console.log('Signup successful:', data);
           // Clear form after successful signup
           setFormData({
@@ -48,6 +48,10 @@ const Signup = () => {
             password: '',
             confirmPassword: ''
           });
+          // Redirect to login page
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
         }
       } catch (error) {
         console.error('Signup error:', error);
