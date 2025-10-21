@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+// Create Auth Context
 const AuthContext = createContext({})
 
+// Custom Hook
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -11,6 +13,7 @@ export const useAuth = () => {
   return context
 }
 
+// Auth Provider
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -36,37 +39,43 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Sign up function
+  // =====================
+  // 🔹 Auth Functions 🔹
+  // =====================
+
+  // Sign Up
   const signUp = async (email, password) => {
     try {
+      const cleanEmail = email.trim() // Prevent invalid email errors
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
       })
-      
       if (error) throw error
       return { data, error: null }
     } catch (error) {
+      console.error('Sign up error:', error)
       return { data: null, error }
     }
   }
 
-  // Sign in function
+  // Sign In
   const signIn = async (email, password) => {
     try {
+      const cleanEmail = email.trim() // Prevent invalid email errors
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       })
-      
       if (error) throw error
       return { data, error: null }
     } catch (error) {
+      console.error('Sign in error:', error)
       return { data: null, error }
     }
   }
 
-  // Sign out function
+  // Sign Out
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut()
@@ -76,20 +85,24 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Reset password function
+  // Reset Password
   const resetPassword = async (email) => {
     try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      const cleanEmail = email.trim()
+      const { data, error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
       })
-      
       if (error) throw error
       return { data, error: null }
     } catch (error) {
+      console.error('Reset password error:', error)
       return { data: null, error }
     }
   }
 
+  // =====================
+  // 🔹 Context Value 🔹
+  // =====================
   const value = {
     user,
     loading,
@@ -105,3 +118,4 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   )
 }
+

@@ -14,7 +14,7 @@ const LandingPage = () => {
     
   ];
 
-  const totalDuration = 10000; // 10 seconds total
+  const totalDuration = 6000; // 10 seconds total
   const perLogoDuration = totalDuration / logos.length; // 2 second per logo
 
   const [progress, setProgress] = useState(0);
@@ -35,7 +35,7 @@ const LandingPage = () => {
         if (prev === logos.length - 1) {
           clearInterval(logoTimer);
           clearInterval(progressTimer);
-          navigate("/login");
+          navigate("/home");
           return prev;
         }
         return prev + 1;

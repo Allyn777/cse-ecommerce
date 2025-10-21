@@ -2,14 +2,15 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 import LandingPage from './components/LandingPage'
+import HomePage from './components/HomePage'
+import Marketplace from './components/Marketplace'
+import AdminDashboard from './components/AdminDashboard'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 
 function AppContent() {
-  // Temporarily disable auth for testing
-  const user = null
-  const loading = false
+  const { user, loading } = useAuth()
 
   if (loading) {
     return (
@@ -19,20 +20,31 @@ function AppContent() {
     )
   }
 
-  if (user) {
+  // Check if user is admin (check both user_metadata and email)
+  const isAdmin = user?.user_metadata?.role === 'admin' || user?.email === 'admin@fightinggears.com'
+
+  if (user && isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="bg-gray-800 rounded-2xl p-8 text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Welcome back!</h1>
-          <p className="text-gray-300 mb-6">You are successfully logged in.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      <Router>
+        <Routes>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/" element={<Navigate to="/admin" replace />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
+        </Routes>
+      </Router>
+    )
+  }
+
+  if (user && !isAdmin) {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
+        </Routes>
+      </Router>
     )
   }
 
@@ -40,14 +52,10 @@ function AppContent() {
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route 
-          path="/login" 
-          element={<Login />} 
-        />
-        <Route 
-          path="/signup" 
-          element={<Signup />} 
-        />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

@@ -36,3 +36,123 @@
 .logo-spin-right {
   animation: logo-spin-right 1.5s ease-out forwards;
 }
+
+/* Custom responsive styles for HomePage */
+@media (max-width: 640px) {
+  .hero-banner {
+    padding: 1rem;
+  }
+  
+  .hero-title {
+    font-size: 2rem;
+    line-height: 2.5rem;
+  }
+  
+  .service-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .brand-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .hero-banner {
+    padding: 2rem;
+  }
+  
+  .hero-title {
+    font-size: 3rem;
+    line-height: 3.5rem;
+  }
+  
+  .service-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .brand-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .hero-banner {
+    padding: 3rem;
+  }
+  
+  .hero-title {
+    font-size: 4rem;
+    line-height: 4.5rem;
+  }
+  
+  .service-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+  }
+  
+  .brand-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* Carousel specific styles */
+.carousel-slide {
+  transition: all 0.5s ease-in-out;
+}
+
+.carousel-image {
+  transition: transform 0.5s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.carousel-image:hover {
+  transform: scale(1.05);
+}
+
+/* Curved design elements */
+.curved-element {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  backdrop-filter: blur(10px);
+}
+
+/* Pagination dots animation */
+.pagination-dot {
+  transition: all 0.3s ease-in-out;
+}
+
+.pagination-dot:hover {
+  transform: scale(1.2);
+}
+
+/* Smooth transitions for interactive elements */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

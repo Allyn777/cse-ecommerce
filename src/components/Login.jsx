@@ -4,6 +4,7 @@ import ProductDisplay from './ProductDisplay';
 import { getValidationErrors } from '../utils/validation';
 import { useAuth } from '../contexts/AuthContext';
 
+
 const Login = () => {
   const navigate = useNavigate();
   const { signIn, resetPassword } = useAuth();
@@ -41,7 +42,15 @@ const Login = () => {
         } else {
           setSuccessMessage('Login successful! Redirecting...');
           console.log('Login successful:', data);
-          // User will be automatically redirected via AuthContext
+          
+          // Check if user is admin and redirect accordingly
+          setTimeout(() => {
+            if (data.user?.user_metadata?.role === 'admin' || data.user?.email === 'admin@fightinggears.com') {
+              navigate('/admin');
+            } else {
+              navigate('/home');
+            }
+          }, 1000);
         }
       } catch (error) {
         console.error('Login error:', error);
