@@ -125,7 +125,7 @@ const HomePage = () => {
           </div>
           
           <button 
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/marketplace')}
             className="text-white hover:text-gray-300 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

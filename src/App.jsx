@@ -1,73 +1,41 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import './index.css'
-import LandingPage from './components/LandingPage'
-import HomePage from './components/HomePage'
-import Marketplace from './components/Marketplace'
-import AdminDashboard from './components/AdminDashboard'
-import Login from './components/Login'
-import Signup from './components/Signup'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-
-function AppContent() {
-  const { user, loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    )
-  }
-
-  // Check if user is admin (check both user_metadata and email)
-  const isAdmin = user?.user_metadata?.role === 'admin' || user?.email === 'admin@fightinggears.com'
-
-  if (user && isAdmin) {
-    return (
-      <Router>
-        <Routes>
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/" element={<Navigate to="/admin" replace />} />
-          <Route path="*" element={<Navigate to="/admin" replace />} />
-        </Routes>
-      </Router>
-    )
-  }
-
-  if (user && !isAdmin) {
-    return (
-      <Router>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="*" element={<Navigate to="/home" replace />} />
-        </Routes>
-      </Router>
-    )
-  }
-
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/marketplace" element={<Marketplace />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
-  )
-}
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import LandingPage from "./components/LandingPage";
+import HomePage from "./components/HomePage";
+import Login from "./components/Login";
+import Signup from "./components/Signup";
+import Marketplace from "./components/Marketplace";
+import ProductDetail from "./components/ProductDetail";
+import Wishlists from "./components/Wishlists";
+import AdminDashboard from "./components/AdminDashboard"; // ✅ added this
+import { AuthProvider } from "./contexts/AuthContext"; // ✅ already correct
 
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <Router>
+        <Routes>
+          {/* Default landing page */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* Auth routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
+          {/* Logged-in routes */}
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/product" element={<ProductDetail />} />
+          <Route path="/wishlists" element={<Wishlists />} />
+
+          {/* ✅ Admin route */}
+          <Route path="/admin" element={<AdminDashboard />} />
+
+          {/* 404 fallback */}
+          <Route path="*" element={<h1>404 - Page Not Found</h1>} />
+        </Routes>
+      </Router>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;

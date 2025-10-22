@@ -116,38 +116,32 @@ const Marketplace = () => {
   );
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="bg-black text-white py-4 px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <button 
-            onClick={() => navigate('/home')}
-            className="text-white hover:text-gray-300 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          
-          <div className="flex items-center space-x-2">
-            <h1 className="text-base sm:text-lg font-semibold">Welcome to Fighting Gears</h1>
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center">
-              <span className="text-black font-bold text-xs sm:text-sm">
-                <img src="/logos/boxing.png" alt="Gloves" className="w-4 h-4 sm:w-6 sm:h-6" />
-              </span>
-            </div>
-          </div>
-          
-          <button 
-            onClick={() => navigate('/login')}
-            className="text-white hover:text-gray-300 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+     <div className="min-h-screen bg-white">
+  {/* Header */}
+  <header className="bg-black text-white py-4 px-4">
+    <div className="max-w-7xl mx-auto flex items-center justify-between">
+      {/* Back Arrow */}
+      <button 
+        onClick={() => navigate('/home')}
+        className="text-white hover:text-gray-300 transition-colors"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      {/* Centered Title + Logo */}
+      <div className="flex items-center justify-center space-x-2 absolute left-1/2 transform -translate-x-1/2">
+        <h1 className="text-base sm:text-lg font-semibold">Welcome to Fighting Gears</h1>
+        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center">
+          <span className="text-black font-bold text-xs sm:text-sm">
+            <img src="/logos/boxing.png" alt="Gloves" className="w-4 h-4 sm:w-6 sm:h-6" />
+          </span>
         </div>
-      </header>
+      </div>
+    </div>
+  </header>
+
 
       {/* Navigation Bar */}
       <nav className="bg-white border-b border-gray-200 py-3 sm:py-4 px-4">
@@ -175,12 +169,16 @@ const Marketplace = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <button className="relative p-2 text-gray-600 hover:text-black transition-colors">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-              </svg>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-black text-white text-xs rounded-full flex items-center justify-center">+</div>
-            </button>
+            
+             <button 
+      className="relative p-2 text-gray-600 hover:text-black transition-colors"
+      onClick={() => navigate('/wishlists')}
+    >
+      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+      </svg>
+      <div className="absolute -top-1 -right-1 w-4 h-4 bg-black text-white text-xs rounded-full flex items-center justify-center">+</div>
+    </button>
           </div>
         </div>
       </nav>
@@ -195,7 +193,7 @@ const Marketplace = () => {
               <div
                 key={category.id}
                 className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 text-center hover:shadow-lg transition-shadow duration-300 cursor-pointer hover-lift"
-                onClick={() => navigate('/products')}
+                onClick={() => navigate('/ProductDetail')}
               >
                 <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 flex items-center justify-center">
                   <img
