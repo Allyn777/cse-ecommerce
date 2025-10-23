@@ -41,31 +41,36 @@ const Wishlist = () => {
   ).length;
 
   return (
-    <div className="min-h-screen bg-white">
-  {/* Header */}
-  <header className="bg-black text-white py-4 px-4">
-    <div className="max-w-7xl mx-auto flex items-center justify-between">
-      {/* Back Arrow */}
-      <button 
-        onClick={() => navigate('/marketplace')}
-        className="text-white hover:text-gray-300 transition-colors"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-
-      {/* Centered Title + Logo */}
-      <div className="flex items-center justify-center space-x-2 absolute left-1/2 transform -translate-x-1/2">
-        <h1 className="text-base sm:text-lg font-semibold">Welcome to Fighting Gears</h1>
-        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center">
-          <span className="text-black font-bold text-xs sm:text-sm">
-            <img src="/logos/boxing.png" alt="Gloves" className="w-4 h-4 sm:w-6 sm:h-6" />
-          </span>
+   <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="bg-black text-white py-4 px-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <button 
+            onClick={() => navigate('/marketplace')}
+            className="text-white hover:text-gray-300 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <div className="flex items-center space-x-2">
+            <h1 className="text-lg font-semibold">Welcome to Fighting Gears</h1>
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <span className="text-black font-bold text-sm"><img src="/logos/boxing.png" alt="Gloves" className="w-6 h-6" /></span>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => navigate('/fightinggearsorder')}
+            className="text-white hover:text-gray-300 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
-      </div>
-    </div>
-  </header>
+      </header>
 
 
 

@@ -23,29 +23,43 @@ const ProductDetail = () => {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Header - Copied from Marketplace for consistency */}
-      <header className="bg-black text-white py-4 px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <button 
-            onClick={() => navigate(-1)} // Use -1 to go back to the previous page
-            className="text-white hover:text-gray-300 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          
-          <div className="flex items-center space-x-2">
-            <h1 className="text-base sm:text-lg font-semibold">Welcome to Fighting Gears</h1>
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center">
-              <span className="text-black font-bold text-xs sm:text-sm">
-                <img src="/logos/boxing.png" alt="Gloves" className="w-4 h-4 sm:w-6 sm:h-6" />
-              </span>
-            </div>
-          </div>
-          
-          <div className="w-6 h-6"></div> {/* Placeholder to center the title */}
-        </div>
-      </header>
+      {/* Header */}
+<header className="bg-black text-white py-2 sm:py-3 md:py-4 px-3 sm:px-6 md:px-8 relative">
+  <div className="max-w-7xl mx-auto flex items-center justify-between relative">
+
+    {/* Back Button */}
+    <button 
+      onClick={() => navigate('/marketplace')}
+      className="text-white hover:text-gray-300 transition-colors p-2 sm:p-3 rounded-full"
+    >
+      <svg className="w-5 sm:w-6 md:w-7 h-5 sm:h-6 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+
+    {/* Centered Title + Logo */}
+    <div className="flex items-center justify-center absolute left-1/2 transform -translate-x-1/2 space-x-1 sm:space-x-2 md:space-x-3">
+      <h1 className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold whitespace-nowrap">
+        Welcome to Fighting Gears
+      </h1>
+      <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-10 lg:h-10 bg-white rounded-full flex items-center justify-center">
+        <img src="/logos/boxing.png" alt="Gloves" className="w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 lg:w-7 lg:h-7" />
+      </div>
+    </div>
+
+    {/* Forward Button */}
+    <button 
+      onClick={() => navigate('/marketplace')}
+      className="text-white hover:text-gray-300 transition-colors p-2 sm:p-3 rounded-full"
+    >
+      <svg className="w-5 sm:w-6 md:w-7 h-5 sm:h-6 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+
+  </div>
+</header>
+
 
       {/* Main Content Area */}
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 w-full">

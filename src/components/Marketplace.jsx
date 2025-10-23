@@ -108,7 +108,7 @@ const Marketplace = () => {
           {product.name}
         </h3>
         <p className="text-xs sm:text-sm text-gray-600 mb-3 flex-shrink-0">{product.price}</p>
-        <button className="w-full bg-black text-white py-2 rounded-lg hover:bg-gray-800 transition-colors text-xs sm:text-sm mt-auto">
+        <button className="w-full bg-black text-white py-2 rounded-lg hover:bg-gray-800 transition-colors text-xs sm:text-sm mt-auto"onClick={() => navigate('/product')}>
           Buy now
         </button>
       </div>
@@ -117,31 +117,38 @@ const Marketplace = () => {
 
   return (
      <div className="min-h-screen bg-white">
-  {/* Header */}
-  <header className="bg-black text-white py-4 px-4">
-    <div className="max-w-7xl mx-auto flex items-center justify-between">
-      {/* Back Arrow */}
-      <button 
-        onClick={() => navigate('/home')}
-        className="text-white hover:text-gray-300 transition-colors"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
+{/* Header */}
+{/* Header */}
 
-      {/* Centered Title + Logo */}
-      <div className="flex items-center justify-center space-x-2 absolute left-1/2 transform -translate-x-1/2">
-        <h1 className="text-base sm:text-lg font-semibold">Welcome to Fighting Gears</h1>
-        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center">
-          <span className="text-black font-bold text-xs sm:text-sm">
-            <img src="/logos/boxing.png" alt="Gloves" className="w-4 h-4 sm:w-6 sm:h-6" />
-          </span>
+      {/* Header */}
+      <header className="bg-black text-white py-4 px-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <button 
+            onClick={() => navigate('/home')}
+            className="text-white hover:text-gray-300 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <div className="flex items-center space-x-2">
+            <h1 className="text-lg font-semibold">Welcome to Fighting Gears</h1>
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <span className="text-black font-bold text-sm"><img src="/logos/boxing.png" alt="Gloves" className="w-6 h-6" /></span>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => navigate('/wishlists')}
+            className="text-white hover:text-gray-300 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
-      </div>
-    </div>
-  </header>
-
+      </header>
 
       {/* Navigation Bar */}
       <nav className="bg-white border-b border-gray-200 py-3 sm:py-4 px-4">
@@ -149,11 +156,11 @@ const Marketplace = () => {
           <div className="flex items-center space-x-4 sm:space-x-6">
             <div className="flex items-center space-x-2">
               <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"onClick={() => navigate('/profilepage')}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <span className="text-gray-700 font-medium text-sm sm:text-base">Sign up</span>
+              <span className="text-gray-700 font-medium text-sm sm:text-base" onClick={() => navigate('/signup')}>Sign up</span>
             </div>
             <span className="text-gray-700 font-medium text-sm sm:text-base">Sales & Offers</span>
           </div>
@@ -163,11 +170,9 @@ const Marketplace = () => {
               <input
                 type="text"
                 placeholder="What are you looking for?"
-                className="w-full sm:w-64 md:w-80 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm sm:text-base"
+                className="w-full sm:w-64 md:w-80 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm sm:text-base "
               />
-              <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+             
             </div>
             
              <button 
@@ -178,7 +183,7 @@ const Marketplace = () => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
       </svg>
       <div className="absolute -top-1 -right-1 w-4 h-4 bg-black text-white text-xs rounded-full flex items-center justify-center">+</div>
-    </button>
+    </button> 
           </div>
         </div>
       </nav>
