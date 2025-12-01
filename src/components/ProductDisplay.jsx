@@ -10,7 +10,7 @@ const ProductDisplay = () => {
     {
       id: 2,
       type: "venum",
-      image: "https://scontent.fcgy2-4.fna.fbcdn.net/v/t39.30808-6/557210653_24818189111124179_6810102383383194283_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=0b6b33&_nc_eui2=AeHQ1G69O0A3sN92A0-w0Zcay7Hu6JaWKy_Lse7olpYrL4vGY64pqFJ04R1WkTjas9uVfE52qe6IEFfGWOwne9eQ&_nc_ohc=zpjenhlR638Q7kNvwHagHak&_nc_oc=AdnMKSZ50zI09bgLzcBVBrE1rn1d25tq-I5AtZ6enkA9qj3Hcby7kkzbHU4OXhIOXEw&_nc_zt=23&_nc_ht=scontent.fcgy2-4.fna&_nc_gid=6-5bMrDQCCY1psYiLNyfnA&oh=00_AffOveSgi2ceNAWTL0cb1EImCQePPkbYJD3j5qBc_sw59A&oe=68FA2B86"
+      image: "https://fighterxfashion.com/wp-content/uploads/2014/02/venum-complete-elite-bundle.jpg"
     },
     {
       id: 3,
