@@ -35,7 +35,6 @@ function App() {
 
           {/* ✅ Admin route */}
           <Route path="/admin" element={<AdminDashboard />} />
-
           {/* 404 fallback */}
           <Route path="*" element={<h1>404 - Page Not Found</h1>} />
         </Routes>

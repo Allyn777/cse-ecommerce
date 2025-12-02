@@ -19,6 +19,7 @@ const Login = () => {
       ...prev,
       [name]: value
     }));
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -37,7 +38,6 @@ const Login = () => {
     }
 
     try {
-      // Sign in with Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email.trim(),
         password: formData.password,
@@ -45,7 +45,6 @@ const Login = () => {
 
       if (authError) throw authError;
 
-      // Get user profile to check role
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('role')
@@ -53,8 +52,6 @@ const Login = () => {
         .single();
 
       if (profileError) {
-        console.error('Profile fetch error:', profileError);
-        // If profile doesn't exist, create one
         const { error: insertError } = await supabase
           .from('user_profiles')
           .insert([
@@ -66,16 +63,13 @@ const Login = () => {
             }
           ]);
 
-        if (insertError) {
-          console.error('Profile creation error:', insertError);
-        }
+        if (insertError) console.error('Profile creation error:', insertError);
 
         setSuccessMessage('Login successful! Redirecting...');
         setTimeout(() => navigate('/home'), 1000);
         return;
       }
 
-      // Update last login
       await supabase
         .from('user_profiles')
         .update({ last_login: new Date().toISOString() })
@@ -83,7 +77,6 @@ const Login = () => {
 
       setSuccessMessage('Login successful! Redirecting...');
 
-      // ✅ Redirect based on role
       setTimeout(() => {
         if (profileData.role === 'admin') {
           navigate('/admin');
@@ -94,8 +87,8 @@ const Login = () => {
 
     } catch (error) {
       console.error('Login error:', error);
-      setErrors({ 
-        general: error.message || 'Invalid email or password. Please try again.' 
+      setErrors({
+        general: error.message || 'Invalid email or password. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
@@ -127,16 +120,20 @@ const Login = () => {
       <div className="w-full max-w-6xl">
         <div className="bg-gray-800 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl">
           <div className="flex flex-col lg:flex-row">
+
             <div className="lg:w-1/2 p-4 sm:p-6 lg:p-8 xl:p-12 bg-[#121212]">
               <div className="max-w-md mx-auto">
+
                 <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
                   Welcome back
                 </h1>
                 <p className="text-gray-300 mb-8">
                   Login to your Fighting Gears account
                 </p>
-                
-                <div className="space-y-6">
+
+                {/* FORM FIXED — ENTER NOW WORKS */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+
                   <div>
                     <label htmlFor="email" className="block text-white text-sm font-medium mb-2">
                       Email
@@ -156,19 +153,21 @@ const Login = () => {
                       <p className="text-red-400 text-xs mt-1">{errors.email}</p>
                     )}
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <label htmlFor="password" className="block text-white text-sm font-medium">
                         Password
                       </label>
                       <button
+                        type="button"
                         onClick={handleForgotPassword}
                         className="text-sm text-white hover:text-blue-400 transition-colors"
                       >
                         Forgot Password?
                       </button>
                     </div>
+
                     <input
                       type="password"
                       id="password"
@@ -184,28 +183,29 @@ const Login = () => {
                       <p className="text-red-400 text-xs mt-1">{errors.password}</p>
                     )}
                   </div>
-                  
+
                   {errors.general && (
                     <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm">
                       {errors.general}
                     </div>
                   )}
-                  
+
                   {successMessage && (
                     <div className="bg-green-900/50 border border-green-500 text-green-200 px-4 py-3 rounded-lg text-sm">
                       {successMessage}
                     </div>
                   )}
-                  
+
                   <button
-                    onClick={handleSubmit}
+                    type="submit"
                     disabled={isSubmitting}
                     className="w-full bg-[#1C1C1C] hover:bg-gray-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
                   >
                     {isSubmitting ? 'Logging in...' : 'Login'}
                   </button>
-                </div>
-                
+
+                </form>
+
                 <div className="mt-6 text-center">
                   <p className="text-gray-300 text-sm">
                     Don't have an account?{' '}
@@ -217,12 +217,14 @@ const Login = () => {
                     </button>
                   </p>
                 </div>
+
               </div>
             </div>
-            
+
             <div className="lg:w-1/2 bg-white p-4 sm:p-6 lg:p-8 xl:p-12">
               <ProductDisplay />
             </div>
+
           </div>
         </div>
       </div>
