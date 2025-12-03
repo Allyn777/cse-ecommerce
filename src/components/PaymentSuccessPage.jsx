@@ -1,277 +1,244 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+// PaymentPage.jsx - FIXED VERSION
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
-const PaymentSuccessPage = () => {
-  const { orderId } = useParams();
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+const PaymentForm = ({ order, clientSecret }) => {
+  const stripe = useStripe();
+  const elements = useElements();
   const navigate = useNavigate();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    setError(null);
+
+    try {
+      console.log('🔵 Starting payment confirmation...');
+      console.log('🔵 Order ID:', order.id);
+      
+      // ✅ FIX: Use proper return_url with explicit payment_intent parameter
+      const returnUrl = `${window.location.origin}/payment-success/${order.id}`;
+      console.log('🔵 Return URL:', returnUrl);
+
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: returnUrl,
+          // ✅ Add payment metadata
+          payment_method_data: {
+            billing_details: {
+              name: order.shipping_address?.name || '',
+              phone: order.shipping_address?.phone || '',
+              address: {
+                line1: order.shipping_address?.address || '',
+                city: order.shipping_address?.city || '',
+                state: order.shipping_address?.province || '',
+                postal_code: order.shipping_address?.zip || '',
+                country: 'PH'
+              }
+            }
+          }
+        },
+        redirect: 'if_required'
+      });
+
+      if (confirmError) {
+        console.error('❌ Payment confirmation error:', confirmError);
+        setError(confirmError.message);
+        setProcessing(false);
+      } else if (paymentIntent) {
+        // ✅ Payment succeeded without redirect
+        console.log('✅ Payment succeeded:', paymentIntent.id);
+        console.log('🔵 Navigating to success page...');
+        
+        // Navigate with payment intent in URL
+        navigate(`/payment-success/${order.id}?payment_intent=${paymentIntent.id}&redirect_status=succeeded`);
+      }
+    } catch (err) {
+      console.error('❌ Payment error:', err);
+      setError('Payment failed. Please try again.');
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <div className="w-full">
+      <div className="bg-white rounded-lg shadow-lg p-6 md:p-8">
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Secure Payment</h2>
+          <p className="text-gray-600 mt-2 text-base md:text-lg">Complete your order with card payment</p>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-5 md:p-6 mb-6">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-base md:text-lg text-gray-600 font-medium">Order Total:</span>
+            <span className="text-2xl md:text-3xl font-bold text-black">₱{order.total_amount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center text-sm md:text-base">
+            <span className="text-gray-600">Order #:</span>
+            <span className="font-semibold">{order.order_number}</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="border border-gray-200 rounded-lg p-4 md:p-6">
+            <PaymentElement 
+              options={{
+                layout: 'tabs',
+                defaultValues: {
+                  billingDetails: {
+                    name: order.shipping_address?.name || '',
+                    phone: order.shipping_address?.phone || '',
+                    address: {
+                      line1: order.shipping_address?.address || '',
+                      city: order.shipping_address?.city || '',
+                      state: order.shipping_address?.province || '',
+                      postal_code: order.shipping_address?.zip || ''
+                    }
+                  }
+                }
+              }}
+            />
+          </div>
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-700 text-sm md:text-base">{error}</p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <button
+              type="submit"
+              disabled={!stripe || processing}
+              className="w-full bg-black text-white py-4 md:py-5 px-6 rounded-lg font-bold text-lg md:text-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg"
+            >
+              {processing ? (
+                <>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+                  Processing Payment...
+                </>
+              ) : (
+                `Pay ₱${order.total_amount.toLocaleString()}`
+              )}
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-full border-2 border-gray-300 text-gray-700 py-4 md:py-5 px-6 rounded-lg font-semibold text-base md:text-lg hover:bg-gray-50 transition-colors"
+            >
+              Back to Order
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-center space-x-2 text-sm md:text-base text-gray-500">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span>Secure payment powered by Stripe</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PaymentPage = () => {
+  const { orderId } = useParams();
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [clientSecret, setClientSecret] = useState(null);
   const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (orderId && user) {
-      handlePaymentSuccess();
+    if (user && orderId) {
+      fetchOrderAndPaymentIntent();
     }
-  }, [orderId, user]);
+  }, [user, orderId]);
 
-  const handlePaymentSuccess = async () => {
+  const fetchOrderAndPaymentIntent = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const paymentIntent = searchParams.get('payment_intent');
-      const paymentIntentClientSecret = searchParams.get('payment_intent_client_secret');
+      console.log('🔵 Fetching order:', orderId, 'for user:', user.id);
 
-      console.log('🔵 ===== PAYMENT SUCCESS FLOW START =====');
-      console.log('🔵 Order ID:', orderId);
-      console.log('🔵 User ID:', user.id);
-      console.log('🔵 Payment Intent:', paymentIntent);
-
-      // ============================================================
-      // STEP 1: Fetch order with items and products
-      // ============================================================
-      console.log('🔵 STEP 1: Fetching order details...');
-      const { data: existingOrder, error: checkError } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items(
-            *,
-            products(id, name, stock, status)
-          )
-        `)
-        .eq('id', orderId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (checkError) {
-        console.error('❌ Order fetch error:', checkError);
-        throw new Error(checkError.code === 'PGRST116' 
-          ? 'Order not found.'
-          : `Failed to verify order: ${checkError.message}`
-        );
-      }
-
-      if (!existingOrder) {
-        throw new Error('Order does not exist.');
-      }
-
-      console.log('✅ Order fetched:', existingOrder.order_number);
-      console.log('🔵 Current payment status:', existingOrder.payment_status);
-      console.log('🔵 Current order status:', existingOrder.status);
-
-      // Check if already processed (prevent double processing)
-      if (existingOrder.payment_status === 'paid') {
-        console.log('⚠️ Order already marked as paid, skipping processing');
-        setOrder(existingOrder);
-        setLoading(false);
-        return;
-      }
-
-      // ============================================================
-      // STEP 2: Update order to PAID & CONFIRMED
-      // ============================================================
-      console.log('🔵 STEP 2: Updating order status to PAID...');
-
-      const { data: updatedOrderArray, error: updateError } = await supabase
-        .from('orders')
-        .update({
-          payment_status: 'paid',
-          status: 'confirmed',
-          paid_at: new Date().toISOString(),
-          stripe_payment_intent_id: paymentIntent || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId)
-        .eq('user_id', user.id)
-        .select();
-
-      console.log('📊 Update result:', { 
-        success: !updateError, 
-        rowsAffected: updatedOrderArray?.length || 0,
-        error: updateError 
-      });
-
-      if (updateError) {
-        console.error('❌ Order update failed:', updateError);
-        console.error('❌ Error code:', updateError.code);
-        console.error('❌ Error message:', updateError.message);
-        throw new Error(`Failed to update order: ${updateError.message}`);
-      }
-
-      if (!updatedOrderArray || updatedOrderArray.length === 0) {
-        console.error('❌ Order update returned 0 rows');
-        console.error('🔍 Check RLS policies for orders table');
-        console.error('🔍 Verify user_id matches:', { orderId, userId: user.id });
-        throw new Error('Order update failed - no rows affected. Check RLS policies.');
-      }
-
-      console.log('✅ Order status updated to PAID & CONFIRMED');
-
-      // ============================================================
-      // STEP 3: Create payment transaction record
-      // ============================================================
-      console.log('🔵 STEP 3: Creating payment transaction record...');
-      
-      if (paymentIntent) {
-        // ✅ CHECK IF TRANSACTION ALREADY EXISTS
-        const { data: existingTransaction } = await supabase
-          .from('payment_transactions')
-          .select('id')
-          .eq('stripe_payment_intent_id', paymentIntent)
-          .maybeSingle(); // ← Use maybeSingle() instead of single()
-
-        if (existingTransaction) {
-          console.log('✅ Transaction already recorded:', existingTransaction.id);
-        } else {
-          // ✅ GENERATE UNIQUE TRANSACTION ID
-          const uniqueTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          
-          const transactionData = {
-            order_id: orderId,
-            transaction_id: uniqueTransactionId, // ← Unique ID
-            payment_method: 'stripe',
-            amount: parseFloat(existingOrder.total_amount),
-            currency: existingOrder.currency || 'PHP',
-            status: 'succeeded',
-            stripe_payment_intent_id: paymentIntent,
-            stripe_charge_id: paymentIntent,
-            gateway_response: {
-              payment_intent: paymentIntent,
-              payment_intent_client_secret: paymentIntentClientSecret,
-              processed_at: new Date().toISOString(),
-              order_number: existingOrder.order_number
-            }
-          };
-
-          console.log('🔵 Transaction data:', {
-            order_id: transactionData.order_id,
-            transaction_id: transactionData.transaction_id,
-            amount: transactionData.amount,
-            currency: transactionData.currency
-          });
-
-          const { data: transactionResult, error: transactionError } = await supabase
-            .from('payment_transactions')
-            .insert(transactionData)
-            .select();
-
-          if (transactionError) {
-            console.error('❌ Payment transaction insert failed:', transactionError);
-            console.error('❌ Error code:', transactionError.code);
-            console.error('❌ Error message:', transactionError.message);
-            console.error('❌ Error details:', JSON.stringify(transactionError, null, 2));
-            
-            // 🔥 DON'T THROW - Log warning but continue
-            console.warn('⚠️ Payment transaction failed but order is still valid');
-          } else if (transactionResult && transactionResult.length > 0) {
-            console.log('✅✅✅ Payment transaction recorded:', transactionResult[0].id);
-            console.log('✅ Transaction ID:', transactionResult[0].transaction_id);
-          } else {
-            console.warn('⚠️ Transaction insert returned no data');
-          }
-        }
-      } else {
-        console.warn('⚠️ No payment intent - skipping transaction record');
-      }
-
-      // ============================================================
-      // STEP 4: Deduct stock from products
-      // ============================================================
-      console.log('🔵 STEP 4: Deducting product stock...');
-      if (existingOrder.order_items && existingOrder.order_items.length > 0) {
-        let stockUpdateCount = 0;
-        
-        for (const item of existingOrder.order_items) {
-          try {
-            const product = item.products;
-            
-            if (!product) {
-              console.warn(`⚠️ Product not found for item:`, item.product_id);
-              continue;
-            }
-
-            const currentStock = product.stock || 0;
-            const newStock = Math.max(0, currentStock - item.quantity);
-            const newStatus = newStock <= 0 ? 'out_of_stock' : 'active';
-
-            console.log(`🔵 Product: ${product.name}`);
-            console.log(`   📦 Stock: ${currentStock} → ${newStock}`);
-            console.log(`   🏷️  Status: ${product.status} → ${newStatus}`);
-
-            const { data: stockUpdate, error: stockError } = await supabase
-              .from('products')
-              .update({ 
-                stock: newStock,
-                status: newStatus,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', item.product_id)
-              .select()
-              .single();
-
-            if (stockError) {
-              console.error(`❌ Stock update failed for ${product.name}:`, stockError);
-            } else {
-              console.log(`✅ Stock updated for ${product.name}`);
-              stockUpdateCount++;
-            }
-          } catch (itemError) {
-            console.error('❌ Error processing item:', itemError);
-          }
-        }
-
-        console.log(`✅ Stock updated for ${stockUpdateCount}/${existingOrder.order_items.length} items`);
-      }
-
-      // ============================================================
-      // STEP 5: Clear user's cart
-      // ============================================================
-      console.log('🔵 STEP 5: Clearing user cart...');
-      try {
-        const { error: cartError } = await supabase
-          .from('cart_items')
-          .delete()
-          .eq('user_id', user.id);
-
-        if (cartError) {
-          console.warn('⚠️ Cart clearing failed:', cartError);
-        } else {
-          console.log('✅ Cart cleared');
-        }
-      } catch (cartErr) {
-        console.warn('⚠️ Cart error:', cartErr);
-      }
-
-      // ============================================================
-      // STEP 6: Fetch final order state
-      // ============================================================
-      console.log('🔵 STEP 6: Fetching final order state...');
-      const { data: finalOrder, error: fetchError } = await supabase
+      // Fetch order
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
         .eq('id', orderId)
+        .eq('user_id', user.id)
         .single();
 
-      if (fetchError) {
-        console.error('❌ Final order fetch error:', fetchError);
-        throw new Error(`Failed to load updated order: ${fetchError.message}`);
+      if (orderError) {
+        console.error('❌ Order fetch error:', orderError);
+        throw new Error('Order not found. Please try again.');
       }
 
-      setOrder(finalOrder);
-      console.log('✅✅✅ PAYMENT SUCCESS FLOW COMPLETE ✅✅✅');
-      console.log('Final order status:', finalOrder.payment_status, finalOrder.status);
-      setLoading(false);
+      if (!orderData) {
+        throw new Error('Order does not exist.');
+      }
+
+      setOrder(orderData);
+      console.log('✅ Order found:', orderData.order_number);
+
+      // Check if already paid
+      if (orderData.payment_status === 'paid') {
+        console.log('⚠️ Order already paid, redirecting...');
+        navigate(`/payment-success/${orderId}`);
+        return;
+      }
+
+      // Create payment intent
+      console.log('🔵 Creating payment intent for amount:', orderData.total_amount);
       
+      const res = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          amount: orderData.total_amount,
+          orderId: orderData.id
+        })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('❌ API error response:', errorText);
+        throw new Error(`Payment setup failed: ${errorText.substring(0, 100)}`);
+      }
+
+      const responseData = await res.json();
+      console.log('✅ Payment intent created:', responseData);
+
+      if (!responseData.clientSecret) {
+        throw new Error('No payment token received');
+      }
+
+      setClientSecret(responseData.clientSecret);
+
     } catch (err) {
-      console.error('❌❌❌ PAYMENT SUCCESS FLOW FAILED ❌❌❌');
-      console.error('Error:', err);
-      setError(err.message || 'Failed to confirm payment');
+      console.error('❌ Payment setup error:', err);
+      setError(err.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -281,8 +248,7 @@ const PaymentSuccessPage = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Confirming your payment...</p>
-          <p className="text-sm text-gray-500 mt-2">⏳ Processing order & updating inventory</p>
+          <p className="text-gray-600">Setting up secure payment...</p>
         </div>
       </div>
     );
@@ -297,23 +263,20 @@ const PaymentSuccessPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Confirmation Error</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <p className="text-sm text-gray-500 mb-6">
-            Your payment may have been successful. Please check your orders or contact support.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Setup Error</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
           <div className="space-y-3">
             <button
-              onClick={() => navigate('/profilepage')}
-              className="w-full bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
+              onClick={fetchOrderAndPaymentIntent}
+              className="w-full bg-black text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
             >
-              VIEW MY ORDERS
+              Try Again
             </button>
             <button
-              onClick={() => navigate('/marketplace')}
-              className="w-full border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              onClick={() => navigate('/cart')}
+              className="w-full border border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 transition-colors"
             >
-              BACK TO SHOPPING
+              Back to Cart
             </button>
           </div>
         </div>
@@ -322,137 +285,75 @@ const PaymentSuccessPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-black text-white py-4 px-4 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-center">
-          <div className="flex items-center space-x-2">
-            <h1 className="text-lg font-semibold">Fighting Gears</h1>
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-              <img src="/logos/boxing.png" alt="Logo" className="w-6 h-6" />
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Complete Your Payment</h1>
+          <p className="text-gray-600 mt-2 text-lg">Final step to confirm your order</p>
+        </div>
+        
+        <div className="grid md:grid-cols-5 gap-6 lg:gap-8">
+          {/* Payment Form - Takes more space */}
+          <div className="md:col-span-3">
+            {clientSecret && order && (
+              <Elements 
+                stripe={stripePromise} 
+                options={{ 
+                  clientSecret,
+                  appearance: {
+                    theme: 'stripe',
+                    variables: {
+                      colorPrimary: '#000000',
+                    }
+                  }
+                }}
+              >
+                <PaymentForm order={order} clientSecret={clientSecret} />
+              </Elements>
+            )}
+          </div>
+          
+          {/* Order Summary Sidebar */}
+          <div className="md:col-span-2">
+            <div className="bg-white rounded-lg shadow-lg p-6 md:p-8 sticky top-6">
+              <h3 className="font-bold text-gray-900 mb-4 text-xl">Order Summary</h3>
+              
+              {order && (
+                <>
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between text-base">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span className="font-semibold">₱{order.subtotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-base">
+                      <span className="text-gray-600">Shipping</span>
+                      <span className="font-semibold">₱{order.shipping_amount.toLocaleString()}</span>
+                    </div>
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <div className="flex justify-between font-bold">
+                        <span className="text-lg">Total</span>
+                        <span className="text-2xl">₱{order.total_amount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 text-base">Shipping to:</h4>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {order.shipping_address?.name}<br />
+                      {order.shipping_address?.address}<br />
+                      {order.shipping_address?.city}, {order.shipping_address?.province}<br />
+                      {order.shipping_address?.phone}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
-      </header>
-
-      {/* Success Content */}
-      <main className="max-w-2xl mx-auto p-4 sm:p-6 py-12">
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          
-          {/* Success Icon */}
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-            <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          
-          {/* Success Message */}
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            Payment Successful! 🎉
-          </h1>
-          <p className="text-gray-600 mb-8 text-lg">
-            Thank you for your purchase! Your order has been confirmed and is being processed.
-          </p>
-
-          {/* Order Details */}
-          <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Order Details</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Order Number</span>
-                <span className="font-semibold text-gray-900">{order?.order_number}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Amount</span>
-                <span className="font-semibold text-gray-900">₱{order?.total_amount?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Payment Method</span>
-                <span className="font-semibold text-gray-900">Credit/Debit Card (Stripe)</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Payment Status</span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                  ✓ PAID
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Order Status</span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                  ✓ CONFIRMED
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* What's Next */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 text-left">
-            <h3 className="text-lg font-bold text-blue-900 mb-3">What's Next?</h3>
-            <ul className="space-y-2 text-sm text-blue-800">
-              <li className="flex items-start">
-                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>✉️ Email confirmation sent to your inbox</span>
-              </li>
-              <li className="flex items-start">
-                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>📦 Order processing: 1-2 business days</span>
-              </li>
-              <li className="flex items-start">
-                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>🚚 Estimated delivery: 3-5 business days</span>
-              </li>
-              <li className="flex items-start">
-                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>📱 Track your order in Profile → Order History</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => navigate('/profilepage')}
-              className="flex-1 bg-black text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
-            >
-              VIEW MY ORDERS
-            </button>
-            <button
-              onClick={() => navigate('/marketplace')}
-              className="flex-1 bg-white text-black border-2 border-black py-3 px-6 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-            >
-              CONTINUE SHOPPING
-            </button>
-          </div>
-        </div>
-
-        {/* Need Help Section */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600 mb-2">Need help with your order?</p>
-          <a 
-            href="mailto:support@fightinggears.com" 
-            className="text-black font-semibold hover:underline text-sm"
-          >
-            📧 Contact Support
-          </a>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-black text-white py-6 px-4 mt-12">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-xs sm:text-sm">© 2025 Fighting Gears. All rights reserved.</p>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };
 
-export default PaymentSuccessPage;
+export default PaymentPage;
