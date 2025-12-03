@@ -228,7 +228,7 @@ const PaymentSuccessPage = () => {
       {/* Footer */}
       <footer className="bg-black text-white py-6 px-4 mt-12">
         <div className="max-w-7xl mx-auto text-center">
-          <p className="text-xs sm:text-sm">© 2024 Fighting Gears. All rights reserved.</p>
+          <p className="text-xs sm:text-sm">© 2025 Fighting Gears. All rights reserved.</p>
         </div>
       </footer>
     </div>
