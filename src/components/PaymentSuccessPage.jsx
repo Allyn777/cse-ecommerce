@@ -22,54 +22,116 @@ const PaymentSuccessPage = () => {
   const handlePaymentSuccess = async () => {
     try {
       setLoading(true);
+      setError(null);
 
-      // Get payment intent details from URL params (Stripe adds these)
+      // Get payment intent details from URL params
       const paymentIntent = searchParams.get('payment_intent');
       const paymentIntentClientSecret = searchParams.get('payment_intent_client_secret');
 
-      // Update order status to paid
-      const { data: updatedOrder, error: updateError } = await supabase
+      console.log('Processing payment success for order:', orderId);
+      console.log('Stripe payment intent:', paymentIntent);
+      console.log('Current user:', user?.id);
+
+      // 1. FIRST check if the order exists and belongs to the user
+      const { data: existingOrder, error: checkError } = await supabase
+        .from('orders')
+        .select('id, payment_status, total_amount, currency, order_number')
+        .eq('id', orderId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (checkError) {
+        console.error('Order check error:', checkError);
+        
+        if (checkError.code === 'PGRST116') {
+          throw new Error('Order not found. It may have been deleted or you do not have permission.');
+        } else {
+          throw new Error(`Failed to verify order: ${checkError.message}`);
+        }
+      }
+
+      if (!existingOrder) {
+        throw new Error('Order does not exist.');
+      }
+
+      // Check if already paid
+      if (existingOrder.payment_status === 'paid') {
+        console.log('Order already paid, showing success page');
+        setOrder(existingOrder);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Update the order payment status - FIXED: Don't chain .select() after .update()
+      const { error: updateError } = await supabase
         .from('orders')
         .update({
           payment_status: 'paid',
           status: 'confirmed',
           paid_at: new Date().toISOString(),
-          stripe_payment_intent_id: paymentIntent || null
+          stripe_payment_intent_id: paymentIntent || null,
+          updated_at: new Date().toISOString()
         })
         .eq('id', orderId)
-        .eq('user_id', user.id)
-        .select()
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        console.error('Update error:', updateError);
+        throw new Error(`Failed to update order status: ${updateError.message}`);
+      }
+
+      // 3. Fetch the updated order separately
+      const { data: updatedOrder, error: fetchError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
         .single();
 
-      if (updateError) throw updateError;
+      if (fetchError) {
+        console.error('Fetch updated order error:', fetchError);
+        throw new Error(`Failed to load updated order: ${fetchError.message}`);
+      }
 
       setOrder(updatedOrder);
 
-      // Create payment transaction record
+      // 4. Create payment transaction record (optional - don't fail if this fails)
       if (paymentIntent) {
-        await supabase
-          .from('payment_transactions')
-          .insert({
-            order_id: orderId,
-            transaction_id: paymentIntent,
-            payment_method: 'stripe',
-            amount: updatedOrder.total_amount,
-            currency: updatedOrder.currency || 'PHP',
-            status: 'succeeded',
-            stripe_payment_intent_id: paymentIntent
-          });
+        try {
+          await supabase
+            .from('payment_transactions')
+            .insert({
+              order_id: orderId,
+              transaction_id: paymentIntent,
+              payment_method: 'stripe',
+              amount: updatedOrder.total_amount,
+              currency: updatedOrder.currency || 'PHP',
+              status: 'succeeded',
+              stripe_payment_intent_id: paymentIntent
+            });
+          console.log('Payment transaction recorded');
+        } catch (transactionError) {
+          console.warn('Transaction record creation failed (non-critical):', transactionError);
+          // Continue anyway - don't fail the whole process
+        }
       }
 
-      // Clear user's cart
-      await supabase
-        .from('cart_items')
-        .delete()
-        .eq('user_id', user.id);
+      // 5. Clear user's cart (optional - don't fail if this fails)
+      try {
+        await supabase
+          .from('cart_items')
+          .delete()
+          .eq('user_id', user.id);
+        console.log('Cart cleared');
+      } catch (cartError) {
+        console.warn('Cart clearing failed (non-critical):', cartError);
+        // Continue anyway
+      }
 
       setLoading(false);
+      
     } catch (err) {
-      console.error('Error updating order:', err);
-      setError(err.message);
+      console.error('Error in payment success:', err);
+      setError(err.message || 'Failed to confirm payment');
       setLoading(false);
     }
   };
@@ -80,6 +142,7 @@ const PaymentSuccessPage = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-gray-600">Confirming your payment...</p>
+          <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
         </div>
       </div>
     );
@@ -94,14 +157,26 @@ const PaymentSuccessPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Error</h1>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => navigate('/profile')}
-            className="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
-          >
-            GO TO MY ORDERS
-          </button>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Confirmation Error</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-sm text-gray-500 mb-6">
+            Your payment was successful with Stripe, but we encountered an issue updating your order.
+            Please contact support with your order number.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/profilepage')}
+              className="w-full bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
+            >
+              GO TO MY ORDERS
+            </button>
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="w-full border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              BACK TO SHOPPING
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -159,7 +234,7 @@ const PaymentSuccessPage = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Status</span>
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                  ✓ Confirmed
+                  ✓ Paid & Confirmed
                 </span>
               </div>
             </div>
@@ -199,7 +274,7 @@ const PaymentSuccessPage = () => {
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate('/profilepage')}
               className="flex-1 bg-black text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
             >
               VIEW MY ORDERS
