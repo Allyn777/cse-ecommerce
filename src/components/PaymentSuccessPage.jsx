@@ -28,41 +28,46 @@ const PaymentSuccessPage = () => {
       const paymentIntent = searchParams.get('payment_intent');
       const paymentIntentClientSecret = searchParams.get('payment_intent_client_secret');
 
-      console.log('Processing payment success for order:', orderId);
-      console.log('Stripe payment intent:', paymentIntent);
-      console.log('Current user:', user?.id);
+      console.log('🔵 Processing payment success for order:', orderId);
+      console.log('🔵 Stripe payment intent:', paymentIntent);
 
-      // 1. FIRST check if the order exists and belongs to the user
+      // 1. Check if order exists and belongs to user
       const { data: existingOrder, error: checkError } = await supabase
         .from('orders')
-        .select('id, payment_status, total_amount, currency, order_number')
+        .select(`
+          *,
+          order_items(
+            *,
+            products(id, stock)
+          )
+        `)
         .eq('id', orderId)
         .eq('user_id', user.id)
         .single();
 
       if (checkError) {
-        console.error('Order check error:', checkError);
-        
-        if (checkError.code === 'PGRST116') {
-          throw new Error('Order not found. It may have been deleted or you do not have permission.');
-        } else {
-          throw new Error(`Failed to verify order: ${checkError.message}`);
-        }
+        console.error('❌ Order check error:', checkError);
+        throw new Error(checkError.code === 'PGRST116' 
+          ? 'Order not found. It may have been deleted or you do not have permission.'
+          : `Failed to verify order: ${checkError.message}`
+        );
       }
 
       if (!existingOrder) {
         throw new Error('Order does not exist.');
       }
 
-      // Check if already paid
+      // Check if already processed
       if (existingOrder.payment_status === 'paid') {
-        console.log('Order already paid, showing success page');
+        console.log('✅ Order already processed, showing success page');
         setOrder(existingOrder);
         setLoading(false);
         return;
       }
 
-      // 2. Update the order payment status - FIXED: Don't chain .select() after .update()
+      console.log('🔵 Order found, processing payment...');
+
+      // 2. Update order status to PAID
       const { error: updateError } = await supabase
         .from('orders')
         .update({
@@ -76,11 +81,96 @@ const PaymentSuccessPage = () => {
         .eq('user_id', user.id);
 
       if (updateError) {
-        console.error('Update error:', updateError);
-        throw new Error(`Failed to update order status: ${updateError.message}`);
+        console.error('❌ Order update error:', updateError);
+        throw new Error(`Failed to update order: ${updateError.message}`);
       }
 
-      // 3. Fetch the updated order separately
+      console.log('✅ Order status updated to PAID');
+
+      // 3. CREATE PAYMENT TRANSACTION RECORD
+      if (paymentIntent) {
+        const { error: transactionError } = await supabase
+          .from('payment_transactions')
+          .insert({
+            order_id: orderId,
+            transaction_id: paymentIntent,
+            payment_method: 'stripe',
+            amount: existingOrder.total_amount,
+            currency: existingOrder.currency || 'PHP',
+            status: 'succeeded',
+            stripe_payment_intent_id: paymentIntent,
+            stripe_charge_id: paymentIntent, // Can be updated with actual charge ID if available
+            gateway_response: {
+              payment_intent: paymentIntent,
+              processed_at: new Date().toISOString()
+            }
+          });
+
+        if (transactionError) {
+          console.error('⚠️ Transaction record error (non-critical):', transactionError);
+          // Don't fail the whole process if this fails
+        } else {
+          console.log('✅ Payment transaction recorded');
+        }
+      }
+
+      // 4. DEDUCT STOCK FOR EACH PRODUCT
+      if (existingOrder.order_items && existingOrder.order_items.length > 0) {
+        console.log('🔵 Deducting stock for', existingOrder.order_items.length, 'items...');
+
+        for (const item of existingOrder.order_items) {
+          try {
+            const product = item.products;
+            if (!product) {
+              console.warn('⚠️ Product not found for item:', item.product_id);
+              continue;
+            }
+
+            const newStock = product.stock - item.quantity;
+            
+            console.log(`🔵 Product ${item.product_name}: ${product.stock} → ${newStock}`);
+
+            // Update product stock
+            const { error: stockError } = await supabase
+              .from('products')
+              .update({ 
+                stock: Math.max(0, newStock), // Never go below 0
+                status: newStock <= 0 ? 'out_of_stock' : 'active' // Auto-update status
+              })
+              .eq('id', item.product_id);
+
+            if (stockError) {
+              console.error('⚠️ Stock update error for product:', item.product_id, stockError);
+              // Continue with other items even if one fails
+            } else {
+              console.log(`✅ Stock updated for ${item.product_name}`);
+            }
+          } catch (stockErr) {
+            console.error('⚠️ Error processing stock for item:', item, stockErr);
+            // Continue with other items
+          }
+        }
+
+        console.log('✅ Stock deduction completed');
+      }
+
+      // 5. Clear user's cart
+      try {
+        const { error: cartError } = await supabase
+          .from('cart_items')
+          .delete()
+          .eq('user_id', user.id);
+
+        if (cartError) {
+          console.warn('⚠️ Cart clearing failed (non-critical):', cartError);
+        } else {
+          console.log('✅ Cart cleared');
+        }
+      } catch (cartErr) {
+        console.warn('⚠️ Cart error:', cartErr);
+      }
+
+      // 6. Fetch updated order
       const { data: updatedOrder, error: fetchError } = await supabase
         .from('orders')
         .select('*')
@@ -88,49 +178,16 @@ const PaymentSuccessPage = () => {
         .single();
 
       if (fetchError) {
-        console.error('Fetch updated order error:', fetchError);
+        console.error('❌ Fetch updated order error:', fetchError);
         throw new Error(`Failed to load updated order: ${fetchError.message}`);
       }
 
       setOrder(updatedOrder);
-
-      // 4. Create payment transaction record (optional - don't fail if this fails)
-      if (paymentIntent) {
-        try {
-          await supabase
-            .from('payment_transactions')
-            .insert({
-              order_id: orderId,
-              transaction_id: paymentIntent,
-              payment_method: 'stripe',
-              amount: updatedOrder.total_amount,
-              currency: updatedOrder.currency || 'PHP',
-              status: 'succeeded',
-              stripe_payment_intent_id: paymentIntent
-            });
-          console.log('Payment transaction recorded');
-        } catch (transactionError) {
-          console.warn('Transaction record creation failed (non-critical):', transactionError);
-          // Continue anyway - don't fail the whole process
-        }
-      }
-
-      // 5. Clear user's cart (optional - don't fail if this fails)
-      try {
-        await supabase
-          .from('cart_items')
-          .delete()
-          .eq('user_id', user.id);
-        console.log('Cart cleared');
-      } catch (cartError) {
-        console.warn('Cart clearing failed (non-critical):', cartError);
-        // Continue anyway
-      }
-
+      console.log('✅✅✅ Payment processing completed successfully!');
       setLoading(false);
       
     } catch (err) {
-      console.error('Error in payment success:', err);
+      console.error('❌ Error in payment success:', err);
       setError(err.message || 'Failed to confirm payment');
       setLoading(false);
     }
@@ -142,7 +199,7 @@ const PaymentSuccessPage = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-gray-600">Confirming your payment...</p>
-          <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
+          <p className="text-sm text-gray-500 mt-2">Processing order and updating inventory</p>
         </div>
       </div>
     );
