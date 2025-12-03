@@ -9,6 +9,8 @@ import Wishlists from "./components/Wishlists";
 import FightingGearsOrder from "./components/FightingGearsOrder";
 import ProfilePage from "./components/ProfilePage";
 import Favorites from "./components/Favorites";
+import PaymentPage from "./components/PaymentPage";
+import PaymentSuccessPage from "./components/PaymentSuccessPage";
 import AdminDashboard from "./components/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute"; // ✅ Import ProtectedRoute
 import { AuthProvider } from "./contexts/AuthContext";
@@ -80,7 +82,23 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/payment/:orderId" 
+          element={
+            <ProtectedRoute>
+              <PaymentPage />
+            </ProtectedRoute>
+          } 
+        />
 
+        <Route 
+          path="/payment-success/:orderId" 
+          element={
+            <ProtectedRoute>
+              <PaymentSuccessPage />
+            </ProtectedRoute>
+          } 
+        />
           {/* ✅ Admin route - ONLY admins can access */}
           <Route 
             path="/admin" 
