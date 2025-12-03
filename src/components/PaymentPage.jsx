@@ -1,4 +1,4 @@
-// PaymentPage.jsx - UPDATED VERSION
+// PaymentPage.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
@@ -23,23 +23,49 @@ const PaymentForm = ({ order, clientSecret }) => {
     setError(null);
 
     try {
-      const { error: confirmError } = await stripe.confirmPayment({
+      console.log('🔵 Starting payment confirmation...');
+      console.log('🔵 Order ID:', order.id);
+      
+      // ✅ FIX: Use proper return_url with explicit payment_intent parameter
+      const returnUrl = `${window.location.origin}/payment-success/${order.id}`;
+      console.log('🔵 Return URL:', returnUrl);
+
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/payment-success/${order.id}`
+          return_url: returnUrl,
+          // ✅ Add payment metadata
+          payment_method_data: {
+            billing_details: {
+              name: order.shipping_address?.name || '',
+              phone: order.shipping_address?.phone || '',
+              address: {
+                line1: order.shipping_address?.address || '',
+                city: order.shipping_address?.city || '',
+                state: order.shipping_address?.province || '',
+                postal_code: order.shipping_address?.zip || '',
+                country: 'PH'
+              }
+            }
+          }
         },
         redirect: 'if_required'
       });
 
       if (confirmError) {
+        console.error('❌ Payment confirmation error:', confirmError);
         setError(confirmError.message);
         setProcessing(false);
-      } else {
-        // Payment successful but not redirected
-        navigate(`/payment-success/${order.id}`);
+      } else if (paymentIntent) {
+        // ✅ Payment succeeded without redirect
+        console.log('✅ Payment succeeded:', paymentIntent.id);
+        console.log('🔵 Navigating to success page...');
+        
+        // Navigate with payment intent in URL
+        navigate(`/payment-success/${order.id}?payment_intent=${paymentIntent.id}&redirect_status=succeeded`);
       }
     } catch (err) {
-      console.error('Payment error:', err);
+      console.error('❌ Payment error:', err);
       setError('Payment failed. Please try again.');
       setProcessing(false);
     }
@@ -150,7 +176,7 @@ const PaymentPage = () => {
       setLoading(true);
       setError(null);
 
-      console.log('Fetching order:', orderId, 'for user:', user.id);
+      console.log('🔵 Fetching order:', orderId, 'for user:', user.id);
 
       // Fetch order
       const { data: orderData, error: orderError } = await supabase
@@ -161,7 +187,7 @@ const PaymentPage = () => {
         .single();
 
       if (orderError) {
-        console.error('Order fetch error:', orderError);
+        console.error('❌ Order fetch error:', orderError);
         throw new Error('Order not found. Please try again.');
       }
 
@@ -170,16 +196,17 @@ const PaymentPage = () => {
       }
 
       setOrder(orderData);
-      console.log('Order found:', orderData);
+      console.log('✅ Order found:', orderData.order_number);
 
       // Check if already paid
       if (orderData.payment_status === 'paid') {
+        console.log('⚠️ Order already paid, redirecting...');
         navigate(`/payment-success/${orderId}`);
         return;
       }
 
       // Create payment intent
-      console.log('Creating payment intent for amount:', orderData.total_amount);
+      console.log('🔵 Creating payment intent for amount:', orderData.total_amount);
       
       const res = await fetch('/api/create-payment-intent', {
         method: 'POST',
@@ -195,12 +222,12 @@ const PaymentPage = () => {
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error('API error response:', errorText);
+        console.error('❌ API error response:', errorText);
         throw new Error(`Payment setup failed: ${errorText.substring(0, 100)}`);
       }
 
       const responseData = await res.json();
-      console.log('Payment intent created:', responseData);
+      console.log('✅ Payment intent created:', responseData);
 
       if (!responseData.clientSecret) {
         throw new Error('No payment token received');
@@ -209,7 +236,7 @@ const PaymentPage = () => {
       setClientSecret(responseData.clientSecret);
 
     } catch (err) {
-      console.error('Payment setup error:', err);
+      console.error('❌ Payment setup error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
