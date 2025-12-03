@@ -31,6 +31,7 @@ const Login = () => {
     setErrors({});
     setSuccessMessage('');
     
+    // Basic validation
     if (!formData.email || !formData.password) {
       setErrors({ general: 'Please fill in all fields' });
       setIsSubmitting(false);
@@ -38,6 +39,7 @@ const Login = () => {
     }
 
     try {
+      // Step 1: Sign in with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email.trim(),
         password: formData.password,
@@ -45,42 +47,72 @@ const Login = () => {
 
       if (authError) throw authError;
 
+      // Step 2: Get user profile to check role
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('role')
+        .select('role, status, username')
         .eq('id', authData.user.id)
         .single();
 
       if (profileError) {
-        const { error: insertError } = await supabase
+        console.error('Profile fetch error:', profileError);
+        
+        // If profile doesn't exist, it should have been created by trigger
+        // Wait a moment and try again
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const { data: retryProfileData, error: retryError } = await supabase
           .from('user_profiles')
-          .insert([
-            {
-              id: authData.user.id,
-              username: authData.user.email?.split('@')[0],
-              role: 'user',
-              email_verified: authData.user.email_confirmed_at ? true : false
+          .select('role, status, username')
+          .eq('id', authData.user.id)
+          .single();
+        
+        if (retryError) {
+          throw new Error('Your account is being set up. Please try logging in again in a moment.');
+        }
+        
+        // Use retry data if successful
+        if (retryProfileData) {
+          // Update last login
+          await supabase
+            .from('user_profiles')
+            .update({ last_login: new Date().toISOString() })
+            .eq('id', authData.user.id);
+          
+          setSuccessMessage('Login successful! Redirecting...');
+          setTimeout(() => {
+            if (retryProfileData.role === 'admin') {
+              navigate('/admin');
+            } else {
+              navigate('/home');
             }
-          ]);
-
-        if (insertError) console.error('Profile creation error:', insertError);
-
-        setSuccessMessage('Login successful! Redirecting...');
-        setTimeout(() => navigate('/home'), 1000);
-        return;
+          }, 1000);
+          return;
+        }
       }
 
+      // Step 3: Check if user is active
+      if (profileData.status !== 'active') {
+        throw new Error('Your account has been suspended. Please contact support.');
+      }
+
+      // Step 4: Update last login timestamp
       await supabase
         .from('user_profiles')
         .update({ last_login: new Date().toISOString() })
         .eq('id', authData.user.id);
 
-      setSuccessMessage('Login successful! Redirecting...');
+      // Step 5: Show success message
+      const userRole = profileData.role;
+      setSuccessMessage(`Welcome ${profileData.username || 'back'}! Redirecting...`);
 
+      // Step 6: Redirect based on role
       setTimeout(() => {
-        if (profileData.role === 'admin') {
+        if (userRole === 'admin') {
+          console.log('🔐 Admin login detected - Redirecting to /admin');
           navigate('/admin');
         } else {
+          console.log('👤 User login detected - Redirecting to /home');
           navigate('/home');
         }
       }, 1000);
@@ -131,7 +163,7 @@ const Login = () => {
                   Login to your Fighting Gears account
                 </p>
 
-                {/* FORM FIXED — ENTER NOW WORKS */}
+                {/* FORM - Enter key works */}
                 <form onSubmit={handleSubmit} className="space-y-6">
 
                   <div>
@@ -148,6 +180,7 @@ const Login = () => {
                         errors.email ? 'border-red-500' : 'border-gray-600'
                       }`}
                       placeholder="Enter your email"
+                      autoComplete="email"
                     />
                     {errors.email && (
                       <p className="text-red-400 text-xs mt-1">{errors.email}</p>
@@ -178,6 +211,7 @@ const Login = () => {
                         errors.password ? 'border-red-500' : 'border-gray-600'
                       }`}
                       placeholder="Enter your password"
+                      autoComplete="current-password"
                     />
                     {errors.password && (
                       <p className="text-red-400 text-xs mt-1">{errors.password}</p>
@@ -215,6 +249,13 @@ const Login = () => {
                     >
                       Sign Up
                     </button>
+                  </p>
+                </div>
+
+                {/* Admin Login Hint */}
+                <div className="mt-8 pt-6 border-t border-gray-700">
+                  <p className="text-xs text-gray-500 text-center">
+                    💡 Admin accounts are created in Supabase Dashboard
                   </p>
                 </div>
 

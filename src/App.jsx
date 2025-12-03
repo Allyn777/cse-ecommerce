@@ -8,33 +8,80 @@ import ProductDetail from "./components/ProductDetail";
 import Wishlists from "./components/Wishlists";
 import FightingGearsOrder from "./components/FightingGearsOrder";
 import ProfilePage from "./components/ProfilePage";
-import AdminDashboard from "./components/AdminDashboard"; // ✅ added this
-import { AuthProvider } from "./contexts/AuthContext"; // ✅ already correct
+import AdminDashboard from "./components/AdminDashboard";
+import ProtectedRoute from "./components/ProtectedRoute"; // ✅ Import ProtectedRoute
+import { AuthProvider } from "./contexts/AuthContext";
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Default landing page */}
+          {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
-
-          {/* Auth routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
-          {/* Logged-in routes */}
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/product" element={<ProductDetail />} />
-          <Route path="/wishlists" element={<Wishlists />} />
-          <Route path="/fightinggearsorder" element={<FightingGearsOrder />} />
-          <Route path="/profilepage" element={<ProfilePage />} />
+          {/* Protected user routes - require login */}
+          <Route 
+            path="/home" 
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/marketplace" 
+            element={
+              <ProtectedRoute>
+                <Marketplace />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/product" 
+            element={
+              <ProtectedRoute>
+                <ProductDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/wishlists" 
+            element={
+              <ProtectedRoute>
+                <Wishlists />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/fightinggearsorder" 
+            element={
+              <ProtectedRoute>
+                <FightingGearsOrder />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profilepage" 
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
 
+          {/* ✅ Admin route - ONLY admins can access */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
 
-
-          {/* ✅ Admin route */}
-          <Route path="/admin" element={<AdminDashboard />} />
           {/* 404 fallback */}
           <Route path="*" element={<h1>404 - Page Not Found</h1>} />
         </Routes>
