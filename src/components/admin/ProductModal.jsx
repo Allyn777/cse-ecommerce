@@ -17,6 +17,16 @@ const ProductModal = ({ editingProduct, onClose, onRefresh }) => {
     image: editingProduct?.image || ""
   });
 
+  // Size selection for gloves
+  const [selectedSizes, setSelectedSizes] = useState(
+    editingProduct?.sizes || []
+  );
+
+  // Color selection
+  const [selectedColors, setSelectedColors] = useState(
+    editingProduct?.colors || []
+  );
+
   // Categories for dropdown
   const categories = [
     { value: "gloves", label: "Gloves" },
@@ -34,6 +44,33 @@ const ProductModal = ({ editingProduct, onClose, onRefresh }) => {
     { value: "hayabusa", label: "Hayabusa" },
     { value: "wesing", label: "Wesing" }
   ];
+
+  // Available sizes for gloves (OZ)
+  const glovesSizes = ["10 OZ", "12 OZ", "14 OZ", "16 OZ"];
+
+  // Available colors for all products
+  const availableColors = [
+    "Black", "White", "Red", "Blue", "Pink", 
+    "Green", "Yellow", "Orange", "Purple", "Gray"
+  ];
+
+  // Handle size toggle for gloves
+  const toggleSize = (size) => {
+    setSelectedSizes(prev => 
+      prev.includes(size) 
+        ? prev.filter(s => s !== size)
+        : [...prev, size]
+    );
+  };
+
+  // Handle color toggle
+  const toggleColor = (color) => {
+    setSelectedColors(prev => 
+      prev.includes(color) 
+        ? prev.filter(c => c !== color)
+        : [...prev, color]
+    );
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -121,6 +158,13 @@ const ProductModal = ({ editingProduct, onClose, onRefresh }) => {
         }
       }
 
+      // Validate sizes for gloves
+      if (formData.category === 'gloves' && selectedSizes.length === 0) {
+        alert('Please select at least one size for gloves');
+        setLoading(false);
+        return;
+      }
+
       const productData = {
         name: formData.name,
         category: formData.category,
@@ -130,7 +174,11 @@ const ProductModal = ({ editingProduct, onClose, onRefresh }) => {
         brand: formData.brand,
         stock: parseInt(formData.stock),
         status: 'active', // Make sure product is active
-        slug: formData.name.toLowerCase().replace(/\s+/g, '-')
+        slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
+        // Only add sizes for gloves, null for others
+        sizes: formData.category === 'gloves' ? selectedSizes : null,
+        // Add colors if any selected
+        colors: selectedColors.length > 0 ? selectedColors : null
       };
 
       if (editingProduct) {
@@ -293,6 +341,64 @@ const ProductModal = ({ editingProduct, onClose, onRefresh }) => {
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black focus:border-black"
                   placeholder="Enter product description..."
                 />
+              </div>
+
+              {/* Size Selection - Only show for Gloves */}
+              {formData.category === 'gloves' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Available Sizes (Select at least one) *
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {glovesSizes.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => toggleSize(size)}
+                        className={`px-4 py-2 border rounded-lg text-sm font-medium transition-all duration-200 ${
+                          selectedSizes.includes(size)
+                            ? 'border-black bg-black text-white'
+                            : 'border-gray-300 text-gray-700 hover:border-black hover:text-black'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedSizes.length > 0 && (
+                    <p className="text-xs text-gray-600 mt-2">
+                      Selected: {selectedSizes.join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Color Selection - Optional for all products */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Available Colors (Optional)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {availableColors.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => toggleColor(color)}
+                      className={`px-4 py-2 border rounded-lg text-sm font-medium transition-all duration-200 ${
+                        selectedColors.includes(color)
+                          ? 'border-black bg-black text-white'
+                          : 'border-gray-300 text-gray-700 hover:border-black hover:text-black'
+                      }`}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
+                {selectedColors.length > 0 && (
+                  <p className="text-xs text-gray-600 mt-2">
+                    Selected: {selectedColors.join(', ')}
+                  </p>
+                )}
               </div>
             </div>
 
