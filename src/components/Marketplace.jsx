@@ -8,6 +8,8 @@ const Marketplace = () => {
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
 
   // Categories data (static)
   const categories = [
@@ -33,13 +35,20 @@ const Marketplace = () => {
     loadProducts();
   }, []);
 
+  // Load counts for badges
+  useEffect(() => {
+    if (user) {
+      loadCounts();
+    }
+  }, [user, products]);
+
   const loadProducts = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('status', 'active') // Only show active products
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -48,6 +57,30 @@ const Marketplace = () => {
       console.error('Error loading products:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCounts = async () => {
+    try {
+      // Get wishlist count
+      const { data: wishlistData, error: wishlistError } = await supabase
+        .from('wishlists')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id);
+
+      if (wishlistError) throw wishlistError;
+      setWishlistCount(wishlistData?.length || 0);
+
+      // Get cart count
+      const { data: cartData, error: cartError } = await supabase
+        .from('cart_items')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id);
+
+      if (cartError) throw cartError;
+      setCartCount(cartData?.length || 0);
+    } catch (error) {
+      console.error('Error loading counts:', error);
     }
   };
 
@@ -145,7 +178,7 @@ const Marketplace = () => {
           </div>
           
           <button 
-            onClick={() => navigate('/wishlists')}
+            onClick={() => navigate('/marketplace')}
             className="text-white hover:text-gray-300 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,12 +194,27 @@ const Marketplace = () => {
           <div className="flex items-center space-x-4 sm:space-x-6">
             <button 
               onClick={() => navigate('/favorites')}
-              className="flex items-center space-x-2 cursor-pointer text-gray-700 hover:text-black transition-colors"
+              className="flex items-center space-x-2 cursor-pointer text-gray-700 hover:text-black transition-colors relative"
             >
               <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
               <span className="font-medium text-sm sm:text-base">Wishlist</span>
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
+            </button>
+
+            <button 
+              onClick={() => navigate('/profilepage')}
+              className="flex items-center space-x-2 cursor-pointer text-gray-700 hover:text-black transition-colors"
+            >
+              <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="font-medium text-sm sm:text-base">Profile</span>
             </button>
             
             {user && (
@@ -198,7 +246,11 @@ const Marketplace = () => {
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
               </svg>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-black text-white text-xs rounded-full flex items-center justify-center">0</div>
+              {cartCount > 0 && (
+                <div className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {cartCount}
+                </div>
+              )}
             </button>
           </div>
         </div>
@@ -229,7 +281,6 @@ const Marketplace = () => {
         </div>
       </section>
 
-      {/* Loading State */}
       {loading && (
         <div className="py-12 text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
@@ -237,7 +288,6 @@ const Marketplace = () => {
         </div>
       )}
 
-      {/* Product Sections by Category */}
       {!loading && (
         <>
           <CategorySection category="Gloves" categoryValue="gloves" />
@@ -248,7 +298,6 @@ const Marketplace = () => {
         </>
       )}
 
-      {/* No Products Message */}
       {!loading && products.length === 0 && (
         <div className="py-12 text-center">
           <p className="text-gray-600 text-lg">No products available yet.</p>

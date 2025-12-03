@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -109,6 +110,7 @@ const Favorites = () => {
     }
   };
 
+  // ✅ UPDATED: Add to cart AND remove from favorites
   const addToCart = async (wishlistItem) => {
     const product = wishlistItem.products;
 
@@ -121,6 +123,7 @@ const Favorites = () => {
       const defaultSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : null;
       const defaultColor = product.colors && product.colors.length > 0 ? product.colors[0] : null;
 
+      // Check if already in cart
       const { data: existing, error: fetchError } = await supabase
         .from('cart_items')
         .select('*')
@@ -135,6 +138,7 @@ const Favorites = () => {
       }
 
       if (existing) {
+        // Update quantity
         const { error: updateError } = await supabase
           .from('cart_items')
           .update({ 
@@ -144,6 +148,7 @@ const Favorites = () => {
 
         if (updateError) throw updateError;
       } else {
+        // Insert new cart item
         const { error: insertError } = await supabase
           .from('cart_items')
           .insert([{
@@ -157,13 +162,23 @@ const Favorites = () => {
         if (insertError) throw insertError;
       }
 
-      alert('Added to cart successfully!');
+      // ✅ REMOVE from favorites after adding to cart
+      const { error: deleteError } = await supabase
+        .from('wishlists')
+        .delete()
+        .eq('id', wishlistItem.id);
+
+      if (deleteError) throw deleteError;
+
+      alert('Moved to cart successfully!');
+      loadWishlist(); // Refresh the list
     } catch (error) {
       console.error('Error adding to cart:', error);
       alert('Error adding to cart: ' + error.message);
     }
   };
 
+  // ✅ UPDATED: Add all to cart AND remove from favorites
   const addAllToCart = async () => {
     if (selectedItems.length === 0) return;
 
@@ -176,8 +191,8 @@ const Favorites = () => {
         await addToCart(item);
       }
 
-      alert('All items added to cart!');
-      navigate('/wishlists');
+      alert('All items moved to cart!');
+      setSelectedItems([]);
     } catch (error) {
       console.error('Error during checkout:', error);
       alert('Error processing items');
@@ -222,11 +237,11 @@ const Favorites = () => {
           </div>
           
           <button 
-            onClick={() => navigate('/wishlists')}
+            onClick={() => navigate('/marketplace')}
             className="text-white hover:text-gray-300 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
