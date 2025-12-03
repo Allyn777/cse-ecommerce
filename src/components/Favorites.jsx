@@ -3,20 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
-const Wishlist = () => {
+const Favorites = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedItems, setSelectedItems] = useState([]);
   const [wishlistItems, setWishlistItems] = useState([]);
-  const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processingCheckout, setProcessingCheckout] = useState(false);
 
-  // Load wishlist and cart items
   useEffect(() => {
     if (user) {
       loadWishlist();
-      loadCart();
     } else {
       navigate('/login');
     }
@@ -52,25 +48,10 @@ const Wishlist = () => {
     }
   };
 
-  const loadCart = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('cart_items')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      setCartItems(data || []);
-    } catch (error) {
-      console.error('Error loading cart:', error);
-    }
-  };
-
   const toggleSelectAll = () => {
     if (selectedItems.length === wishlistItems.filter(item => item.products?.stock > 0).length) {
       setSelectedItems([]);
     } else {
-      // Only select items that are in stock
       setSelectedItems(
         wishlistItems
           .filter(item => item.products?.stock > 0)
@@ -90,7 +71,7 @@ const Wishlist = () => {
   const deleteSelected = async () => {
     if (selectedItems.length === 0) return;
 
-    if (!confirm(`Delete ${selectedItems.length} item(s) from wishlist?`)) return;
+    if (!confirm(`Remove ${selectedItems.length} item(s) from favorites?`)) return;
 
     try {
       const { error } = await supabase
@@ -102,7 +83,7 @@ const Wishlist = () => {
 
       setSelectedItems([]);
       loadWishlist();
-      alert('Items removed from wishlist');
+      alert('Items removed from favorites');
     } catch (error) {
       console.error('Error deleting wishlist items:', error);
       alert('Error removing items: ' + error.message);
@@ -110,7 +91,7 @@ const Wishlist = () => {
   };
 
   const deleteItem = async (wishlistId) => {
-    if (!confirm('Remove this item from wishlist?')) return;
+    if (!confirm('Remove this item from favorites?')) return;
 
     try {
       const { error } = await supabase
@@ -121,7 +102,7 @@ const Wishlist = () => {
       if (error) throw error;
 
       loadWishlist();
-      alert('Item removed from wishlist');
+      alert('Item removed from favorites');
     } catch (error) {
       console.error('Error deleting item:', error);
       alert('Error removing item: ' + error.message);
@@ -137,11 +118,9 @@ const Wishlist = () => {
     }
 
     try {
-      // Get default size and color
       const defaultSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : null;
       const defaultColor = product.colors && product.colors.length > 0 ? product.colors[0] : null;
 
-      // Check if already in cart
       const { data: existing, error: fetchError } = await supabase
         .from('cart_items')
         .select('*')
@@ -156,7 +135,6 @@ const Wishlist = () => {
       }
 
       if (existing) {
-        // Update quantity
         const { error: updateError } = await supabase
           .from('cart_items')
           .update({ 
@@ -166,7 +144,6 @@ const Wishlist = () => {
 
         if (updateError) throw updateError;
       } else {
-        // Insert new cart item
         const { error: insertError } = await supabase
           .from('cart_items')
           .insert([{
@@ -181,22 +158,14 @@ const Wishlist = () => {
       }
 
       alert('Added to cart successfully!');
-      loadCart();
     } catch (error) {
       console.error('Error adding to cart:', error);
       alert('Error adding to cart: ' + error.message);
     }
   };
 
-  const checkoutItem = async (wishlistItem) => {
-    await addToCart(wishlistItem);
-    navigate('/fightinggearsorder');
-  };
-
-  const checkoutAll = async () => {
+  const addAllToCart = async () => {
     if (selectedItems.length === 0) return;
-
-    setProcessingCheckout(true);
 
     try {
       const selectedWishlistItems = wishlistItems.filter(item => 
@@ -208,12 +177,10 @@ const Wishlist = () => {
       }
 
       alert('All items added to cart!');
-      navigate('/fightinggearsorder');
+      navigate('/wishlists');
     } catch (error) {
       console.error('Error during checkout:', error);
-      alert('Error processing checkout');
-    } finally {
-      setProcessingCheckout(false);
+      alert('Error processing items');
     }
   };
 
@@ -227,7 +194,7 @@ const Wishlist = () => {
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
-          <p className="mt-4 text-gray-600">Loading wishlist...</p>
+          <p className="mt-4 text-gray-600">Loading favorites...</p>
         </div>
       </div>
     );
@@ -255,131 +222,127 @@ const Wishlist = () => {
           </div>
           
           <button 
-            onClick={() => navigate('/fightinggearsorder')}
-            className="text-white hover:text-gray-300 transition-colors relative"
+            onClick={() => navigate('/wishlists')}
+            className="text-white hover:text-gray-300 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
             </svg>
-            {cartItems.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {cartItems.length}
-              </span>
-            )}
           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 w-full">
         <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
-          <h2 className="text-3xl sm:text-4xl font-bold text-black">Wishlist</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-black">My Favorites</h2>
           <span className="text-gray-600">{wishlistItems.length} items</span>
         </div>
 
         {wishlistItems.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600 text-lg mb-4">Your wishlist is empty</p>
+            <svg className="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <p className="text-gray-600 text-lg mb-4">Your favorites list is empty</p>
             <button
               onClick={() => navigate('/marketplace')}
               className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors"
             >
-              Continue Shopping
+              Start Shopping
             </button>
           </div>
         ) : (
           <>
-            {/* Desktop Table View */}
+            {/* Desktop Table */}
             <div className="hidden lg:block bg-white border border-gray-300 rounded-lg shadow-md">
-              <div className="overflow-x-auto">
-                <table className="w-full whitespace-nowrap">
-                  <thead className="border-b border-gray-300">
-                    <tr className="text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                      <th className="py-4 px-6 w-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.length === wishlistItems.filter(i => i.products?.stock > 0).length && wishlistItems.length > 0}
-                          onChange={toggleSelectAll}
-                          className="w-4 h-4 accent-black rounded"
-                        />
-                      </th>
-                      <th className="py-4 px-6 w-1/2">PRODUCTS</th>
-                      <th className="py-4 px-6">PRICE</th>
-                      <th className="py-4 px-6">STOCK STATUS</th>
-                      <th className="py-4 px-6 text-right">ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {wishlistItems.map((item) => {
-                      const product = item.products;
-                      const inStock = product?.stock > 0;
+              <table className="w-full">
+                <thead className="border-b border-gray-300">
+                  <tr className="text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="py-4 px-6 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.length === wishlistItems.filter(i => i.products?.stock > 0).length && wishlistItems.length > 0}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 accent-black rounded"
+                      />
+                    </th>
+                    <th className="py-4 px-6 w-1/2">PRODUCTS</th>
+                    <th className="py-4 px-6">PRICE</th>
+                    <th className="py-4 px-6">STOCK</th>
+                    <th className="py-4 px-6 text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wishlistItems.map((item) => {
+                    const product = item.products;
+                    const inStock = product?.stock > 0;
 
-                      return (
-                        <tr key={item.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors">
-                          <td className="py-4 px-6 align-top">
-                            <input
-                              type="checkbox"
-                              checked={selectedItems.includes(item.id)}
-                              onChange={() => toggleItemSelection(item.id)}
-                              disabled={!inStock}
-                              className={`w-4 h-4 rounded ${inStock ? 'accent-black' : 'text-gray-400'}`}
-                            />
-                          </td>
-                          <td className="py-4 px-6">
-                            <div className="flex items-center space-x-4">
-                              <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                                <img 
-                                  src={product?.image || '/logos/placeholder.png'} 
-                                  alt={product?.name} 
-                                  className="w-full h-full object-contain p-1" 
-                                />
-                              </div>
-                              <div>
-                                <p className="font-semibold text-gray-900">{product?.name}</p>
-                                <p className="text-sm text-gray-500">{product?.brand}</p>
-                              </div>
+                    return (
+                      <tr key={item.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors">
+                        <td className="py-4 px-6">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.includes(item.id)}
+                            onChange={() => toggleItemSelection(item.id)}
+                            disabled={!inStock}
+                            className={`w-4 h-4 rounded ${inStock ? 'accent-black' : 'text-gray-400'}`}
+                          />
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                              <img 
+                                src={product?.image || '/logos/placeholder.png'} 
+                                alt={product?.name} 
+                                className="w-full h-full object-contain p-1" 
+                              />
                             </div>
-                          </td>
-                          <td className="py-4 px-6 font-semibold text-gray-900">
-                            ₱{parseFloat(product?.price || 0).toLocaleString()}
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className={`inline-block text-xs font-bold ${
-                              inStock ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {inStock ? `IN STOCK (${product.stock})` : 'OUT OF STOCK'}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 text-right space-x-2">
-                            <button
-                              onClick={() => checkoutItem(item)}
-                              disabled={!inStock}
-                              className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
-                                inStock
-                                  ? 'bg-black text-white hover:bg-gray-800'
-                                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              }`}
-                            >
-                              ADD TO CART
-                            </button>
-                            <button
-                              onClick={() => deleteItem(item.id)}
-                              className="px-3 py-2 text-sm rounded-lg font-medium text-red-600 hover:bg-red-50 transition-colors"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">{product?.name}</p>
+                              <p className="text-sm text-gray-500">{product?.brand}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 font-semibold text-gray-900">
+                          ₱{parseFloat(product?.price || 0).toLocaleString()}
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`inline-block text-xs font-bold ${
+                            inStock ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {inStock ? `IN STOCK (${product.stock})` : 'OUT OF STOCK'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right space-x-2">
+                          <button
+                            onClick={() => addToCart(item)}
+                            disabled={!inStock}
+                            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
+                              inStock
+                                ? 'bg-black text-white hover:bg-gray-800'
+                                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            }`}
+                          >
+                            ADD TO CART
+                          </button>
+                          <button
+                            onClick={() => deleteItem(item.id)}
+                            className="px-3 py-2 text-sm rounded-lg font-medium text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
-            {/* Mobile Card View */}
+            {/* Mobile Cards */}
             <div className="lg:hidden space-y-4">
               {wishlistItems.map((item) => {
                 const product = item.products;
@@ -408,9 +371,7 @@ const Wishlist = () => {
                         <p className="font-semibold text-gray-900 text-base">{product?.name}</p>
                         <p className="text-sm text-gray-500 mb-1">{product?.brand}</p>
                         <p className="font-bold text-lg text-black">₱{parseFloat(product?.price || 0).toLocaleString()}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <span className={`inline-block text-xs font-bold ${
+                        <span className={`inline-block text-xs font-bold mt-1 ${
                           inStock ? 'text-green-600' : 'text-red-600'
                         }`}>
                           {inStock ? 'IN STOCK' : 'OUT OF STOCK'}
@@ -420,7 +381,7 @@ const Wishlist = () => {
                     
                     <div className="mt-4 pt-4 border-t border-gray-200 flex space-x-2">
                       <button
-                        onClick={() => checkoutItem(item)}
+                        onClick={() => addToCart(item)}
                         disabled={!inStock}
                         className={`flex-1 py-3 text-sm rounded-lg font-medium transition-colors ${
                           inStock
@@ -444,7 +405,7 @@ const Wishlist = () => {
               })}
             </div>
 
-            {/* Action Buttons Footer */}
+            {/* Footer Actions */}
             <div className="mt-8 flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center space-y-4 sm:space-y-0 space-y-reverse">
               <div className="flex items-center space-x-6">
                 <label className="flex items-center cursor-pointer text-gray-700 font-medium">
@@ -454,7 +415,7 @@ const Wishlist = () => {
                     onChange={toggleSelectAll}
                     className="w-4 h-4 accent-black rounded mr-2"
                   />
-                  Select All (In Stock)
+                  Select All
                 </label>
                 <button
                   onClick={deleteSelected}
@@ -465,23 +426,20 @@ const Wishlist = () => {
                       : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  <svg className="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Delete ({selectedItems.length})
+                  Remove ({selectedItems.length})
                 </button>
               </div>
               
               <button
-                onClick={checkoutAll}
-                disabled={selectedItems.length === 0 || totalSelectedInStock === 0 || processingCheckout}
+                onClick={addAllToCart}
+                disabled={selectedItems.length === 0 || totalSelectedInStock === 0}
                 className={`w-full sm:w-auto px-8 py-3 rounded-lg font-semibold transition-colors ${
-                  selectedItems.length > 0 && totalSelectedInStock > 0 && !processingCheckout
+                  selectedItems.length > 0 && totalSelectedInStock > 0
                     ? 'bg-black text-white hover:bg-gray-800'
                     : 'bg-gray-400 text-white cursor-not-allowed'
                 }`}
               >
-                {processingCheckout ? 'Processing...' : `ADD ALL TO CART (${totalSelectedInStock})`}
+                ADD ALL TO CART ({totalSelectedInStock})
               </button>
             </div>
           </>
@@ -498,4 +456,4 @@ const Wishlist = () => {
   );
 };
 
-export default Wishlist;
+export default Favorites;

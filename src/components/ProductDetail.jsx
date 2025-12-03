@@ -218,11 +218,11 @@ const ProductDetail = () => {
 
           {/* Wishlist Button */}
           <button 
-            onClick={handleAddToWishlist}
+            onClick={() => navigate('/marketplace')}
             className="text-white hover:text-gray-300 transition-colors p-2 sm:p-3 rounded-full"
           >
             <svg className="w-5 sm:w-6 md:w-7 h-5 sm:h-6 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
@@ -355,15 +355,29 @@ const ProductDetail = () => {
               </p>
             </div>
 
-            {/* Add to Cart Button */}
+            {/* Action Buttons - Separated Heart and Add to Cart */}
             <div className="fixed inset-x-0 bottom-0 md:static bg-white md:bg-transparent p-4 md:p-0 shadow-lg md:shadow-none border-t md:border-t-0 border-gray-200 z-10">
-              <button 
-                onClick={handleAddToCart}
-                disabled={addingToCart || product.stock <= 0}
-                className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors text-base font-semibold uppercase disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {addingToCart ? 'Adding...' : product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
-              </button>
+              <div className="flex gap-3">
+                {/* Add to Wishlist Heart Button */}
+                <button 
+                  onClick={handleAddToWishlist}
+                  className="px-4 py-3 border-2 border-black rounded-lg hover:bg-gray-100 transition-colors"
+                  title="Add to Favorites"
+                >
+                  <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
+
+                {/* Add to Cart Button */}
+                <button 
+                  onClick={handleAddToCart}
+                  disabled={addingToCart || product.stock <= 0}
+                  className="flex-1 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors text-base font-semibold uppercase disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {addingToCart ? 'Adding...' : product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

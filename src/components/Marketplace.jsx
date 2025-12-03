@@ -159,14 +159,15 @@ const Marketplace = () => {
       <nav className="bg-white border-b border-gray-200 py-3 sm:py-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
           <div className="flex items-center space-x-4 sm:space-x-6">
-            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/profilepage')}>
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <span className="text-gray-700 font-medium text-sm sm:text-base">Profile</span>
-            </div>
+            <button 
+              onClick={() => navigate('/favorites')}
+              className="flex items-center space-x-2 cursor-pointer text-gray-700 hover:text-black transition-colors"
+            >
+              <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              <span className="font-medium text-sm sm:text-base">Wishlist</span>
+            </button>
             
             {user && (
               <button 
