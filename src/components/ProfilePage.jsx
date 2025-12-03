@@ -15,15 +15,6 @@ const BagIcon = (props) => <Icon path="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9
 const CameraIcon = (props) => <Icon path="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9zM15 13a3 3 0 11-6 0 3 3 0 016 0z" {...props} />;
 const CheckCircleIcon = (props) => <Icon path="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" {...props} />;
 
-const ActionButton = ({ label, onClick, style = 'primary' }) => {
-    const baseStyle = "px-3 py-1 text-xs font-bold rounded-lg transition-colors shadow-sm min-w-[70px]";
-    const specificStyle = style === 'primary' 
-        ? "bg-black text-white hover:bg-gray-800" 
-        : "bg-white text-black border border-gray-300 hover:bg-gray-100";
-
-    return <button onClick={onClick} className={`${baseStyle} ${specificStyle}`}>{label}</button>;
-};
-
 const ProfilePage = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -36,7 +27,7 @@ const ProfilePage = () => {
     });
     const [profileImage, setProfileImage] = useState(null);
     const [uploadMessage, setUploadMessage] = useState({ text: '', type: '' });
-    const [selectedTab, setSelectedTab] = useState('To Pay');
+    const [selectedTab, setSelectedTab] = useState('Order History');
     const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState([]);
 
@@ -173,96 +164,125 @@ const ProfilePage = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const tabs = ['To Pay', 'To Ship', 'To Receive', 'Completed', 'Cancelled'];
+    // UPDATED TABS: Payment History, Order History, Completed, Cancelled
+    const tabs = ['Payment History', 'Order History', 'Completed', 'Cancelled'];
 
-    // Organize orders by status
+    // Organize orders by tab
     const ordersByTab = {
-        'To Pay': orders.filter(o => o.payment_status === 'pending'),
-        'To Ship': orders.filter(o => o.payment_status === 'paid' && o.status === 'confirmed'),
-        'To Receive': orders.filter(o => o.status === 'shipped'),
+        'Payment History': orders.filter(o => o.payment_status === 'paid'),
+        'Order History': orders.filter(o => 
+            o.status === 'confirmed' || 
+            o.status === 'processing' || 
+            o.status === 'shipped'
+        ),
         'Completed': orders.filter(o => o.status === 'delivered'),
         'Cancelled': orders.filter(o => o.status === 'cancelled' || o.status === 'refunded')
+    };
+
+    const getStatusBadge = (status) => {
+        const badges = {
+            pending: { color: 'bg-yellow-100 text-yellow-700', text: 'PENDING' },
+            confirmed: { color: 'bg-blue-100 text-blue-700', text: 'CONFIRMED' },
+            processing: { color: 'bg-purple-100 text-purple-700', text: 'PROCESSING' },
+            shipped: { color: 'bg-indigo-100 text-indigo-700', text: 'SHIPPED' },
+            delivered: { color: 'bg-green-100 text-green-700', text: 'DELIVERED' },
+            cancelled: { color: 'bg-red-100 text-red-700', text: 'CANCELLED' },
+            refunded: { color: 'bg-gray-100 text-gray-700', text: 'REFUNDED' }
+        };
+        return badges[status] || badges.pending;
+    };
+
+    const getPaymentBadge = (paymentStatus) => {
+        const badges = {
+            pending: { color: 'bg-orange-100 text-orange-700', text: 'UNPAID' },
+            paid: { color: 'bg-green-100 text-green-700', text: 'PAID' },
+            failed: { color: 'bg-red-100 text-red-700', text: 'FAILED' },
+            refunded: { color: 'bg-blue-100 text-blue-700', text: 'REFUNDED' }
+        };
+        return badges[paymentStatus] || badges.pending;
     };
 
     const renderOrderItem = (order) => {
         const firstItem = order.order_items?.[0];
         const itemCount = order.order_items?.length || 0;
-        
-        let actionButtons;
-        let statusColorClass;
-        let statusText = order.status.toUpperCase();
-        
-        switch (selectedTab) {
-            case 'To Pay':
-                actionButtons = (
-                    <>
-                        <ActionButton label="PAY NOW" onClick={() => navigate(`/checkout/${order.id}`)} style="primary" />
-                        <ActionButton label="CANCEL" onClick={() => console.log('Cancel order:', order.id)} style="secondary" />
-                    </>
-                );
-                statusColorClass = 'text-orange-600';
-                statusText = order.payment_method === 'cod' ? 'CASH ON DELIVERY' : 'AWAITING PAYMENT';
-                break;
-            case 'To Ship':
-                actionButtons = (
-                    <button className="text-black text-sm font-medium hover:text-gray-700 transition-colors p-2">
-                        Track Order
-                    </button>
-                );
-                statusColorClass = 'text-orange-600';
-                statusText = 'PROCESSING';
-                break;
-            case 'To Receive':
-                actionButtons = (
-                    <>
-                        <ActionButton label="RECEIVE" onClick={() => console.log('Receive order:', order.id)} style="primary" />
-                        <ActionButton label="TRACK" onClick={() => console.log('Track order:', order.id)} style="secondary" />
-                    </>
-                );
-                statusColorClass = 'text-blue-600';
-                statusText = 'IN TRANSIT';
-                break;
-            case 'Completed':
-                actionButtons = (
-                    <button className="text-black text-sm font-medium hover:text-gray-700 transition-colors p-2">
-                        View Order
-                    </button>
-                );
-                statusColorClass = 'text-green-600';
-                statusText = 'DELIVERED';
-                break;
-            case 'Cancelled':
-                actionButtons = null;
-                statusColorClass = 'text-red-600';
-                statusText = order.status === 'refunded' ? 'REFUNDED' : 'CANCELLED';
-                break;
-            default:
-                actionButtons = null;
-                statusColorClass = 'text-gray-600';
-        }
+        const statusBadge = getStatusBadge(order.status);
+        const paymentBadge = getPaymentBadge(order.payment_status);
 
         return (
-            <div key={order.id} className="bg-gray-50 rounded-xl p-4 mb-3 last:mb-0 border border-gray-200">
-                <div className="flex justify-between items-start flex-col sm:flex-row sm:items-center">
-                    <div className="mb-2 sm:mb-0">
-                        <h3 className="font-semibold text-gray-900">
-                            {firstItem?.product_name || 'Order'} 
-                            {itemCount > 1 && ` (+${itemCount - 1} more items)`}
-                        </h3>
-                        <p className="text-xs text-gray-600 mt-0.5">
-                            Total: ₱{order.total_amount?.toLocaleString()}
-                        </p>
-                        <p className={`text-sm mt-1 font-medium ${statusColorClass}`}>
-                            Status: {statusText}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
+            <div key={order.id} className="bg-gray-50 rounded-xl p-4 mb-3 last:mb-0 border border-gray-200 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 className="font-semibold text-gray-900 text-base">
                             Order #{order.order_number}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {new Date(order.created_at).toLocaleDateString('en-PH', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            })}
                         </p>
                     </div>
-                    
-                    <div className="flex space-x-2">
-                        {actionButtons}
+                    <div className="flex flex-col gap-1 items-end">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge.color}`}>
+                            {statusBadge.text}
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${paymentBadge.color}`}>
+                            {paymentBadge.text}
+                        </span>
                     </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-3">
+                    <div className="flex items-center space-x-3 mb-2">
+                        {firstItem?.products?.image && (
+                            <img 
+                                src={firstItem.products.image} 
+                                alt={firstItem.products.name}
+                                className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                            />
+                        )}
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">
+                                {firstItem?.products?.name || 'Product'}
+                            </p>
+                            {itemCount > 1 && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    +{itemCount - 1} more item{itemCount > 2 ? 's' : ''}
+                                </p>
+                            )}
+                            <p className="text-sm font-bold text-black mt-1">
+                                Total: ₱{order.total_amount?.toLocaleString()}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Additional Info */}
+                    <div className="mt-3 text-xs text-gray-600 space-y-1">
+                        <p>💳 Payment: {order.payment_method === 'stripe' ? 'Credit/Debit Card' : 'Cash on Delivery'}</p>
+                        <p>📦 Items: {itemCount} item{itemCount > 1 ? 's' : ''}</p>
+                        {order.shipping_address?.address && (
+                            <p className="truncate">📍 Ship to: {order.shipping_address.address}</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="mt-3 pt-3 border-t border-gray-200 flex gap-2">
+                    {order.status === 'shipped' && (
+                        <button 
+                            className="flex-1 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                            onClick={() => alert('Track Order: ' + order.order_number)}
+                        >
+                            Track Order
+                        </button>
+                    )}
+                    <button 
+                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
+                        onClick={() => alert('View Details: ' + order.order_number)}
+                    >
+                        View Details
+                    </button>
                 </div>
             </div>
         );
@@ -277,7 +297,7 @@ const ProfilePage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-white-100 font-sans">
+        <div className="min-h-screen bg-white font-sans">
             {/* Header - Black Background */}
             <header className="bg-black text-white py-4 px-4">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -293,9 +313,7 @@ const ProfilePage = () => {
                     <div className="flex items-center space-x-2">
                         <h1 className="text-lg font-semibold">Welcome to Fighting Gears</h1>
                         <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                            <span className="text-black font-bold text-sm">
-                                <img src="/logos/boxing.png" alt="Gloves" className="w-6 h-6" />
-                            </span>
+                            <img src="/logos/boxing.png" alt="Gloves" className="w-6 h-6" />
                         </div>
                     </div>
                     
@@ -439,10 +457,10 @@ const ProfilePage = () => {
                     </div>
                 </div>
 
-                {/* My Purchase Section */}
+                {/* My Orders Section - UPDATED TABS */}
                 <div className="bg-white rounded-xl shadow-xl border border-gray-200 mt-6 overflow-hidden">
                     <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
-                        <h2 className="text-xl font-bold text-black">My Purchase</h2>
+                        <h2 className="text-xl font-bold text-black">My Orders</h2>
                     </div>
 
                     <div className="border-b border-gray-200 overflow-x-auto">
@@ -451,7 +469,7 @@ const ProfilePage = () => {
                                 <button
                                     key={tab}
                                     onClick={() => setSelectedTab(tab)}
-                                    className={`flex-1 px-4 py-3 text-sm font-semibold whitespace-nowrap min-w-[20%] transition-colors ${
+                                    className={`flex-1 px-4 py-3 text-sm font-semibold whitespace-nowrap min-w-[25%] transition-colors ${
                                         selectedTab === tab ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
                                     }`}
                                 >
@@ -465,7 +483,7 @@ const ProfilePage = () => {
                         {ordersByTab[selectedTab].length === 0 ? (
                             <div className="text-center py-8">
                                 <BagIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-500">No orders found in this tab.</p>
+                                <p className="text-gray-500">No orders found in {selectedTab}.</p>
                             </div>
                         ) : (
                             ordersByTab[selectedTab].map(renderOrderItem)
