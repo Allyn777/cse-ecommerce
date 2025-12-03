@@ -12,8 +12,9 @@ import Favorites from "./components/Favorites";
 import PaymentPage from "./components/PaymentPage";
 import PaymentSuccessPage from "./components/PaymentSuccessPage";
 import AdminDashboard from "./components/AdminDashboard";
-import ProtectedRoute from "./components/ProtectedRoute"; // ✅ Import ProtectedRoute
+import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
+import OrderSuccessPage from "./components/OrderSuccessPage"; // Add this import
 
 function App() {
   return (
@@ -43,7 +44,7 @@ function App() {
             } 
           />
           <Route 
-            path="/product" 
+            path="/product/:productId?" 
             element={
               <ProtectedRoute>
                 <ProductDetail />
@@ -55,6 +56,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Wishlists />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/checkout" 
+            element={
+              <ProtectedRoute>
+                <FightingGearsOrder />
               </ProtectedRoute>
             } 
           />
@@ -75,31 +84,39 @@ function App() {
             } 
           />
           <Route 
-          path="/favorites" 
-          element={
-            <ProtectedRoute>
-              <Favorites />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/payment/:orderId" 
-          element={
-            <ProtectedRoute>
-              <PaymentPage />
-            </ProtectedRoute>
-          } 
-        />
+            path="/favorites" 
+            element={
+              <ProtectedRoute>
+                <Favorites />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/payment/:orderId" 
+            element={
+              <ProtectedRoute>
+                <PaymentPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/payment-success/:orderId" 
+            element={
+              <ProtectedRoute>
+                <PaymentSuccessPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/order-success/:orderId" 
+            element={
+              <ProtectedRoute>
+                <OrderSuccessPage />
+              </ProtectedRoute>
+            } 
+          />
 
-        <Route 
-          path="/payment-success/:orderId" 
-          element={
-            <ProtectedRoute>
-              <PaymentSuccessPage />
-            </ProtectedRoute>
-          } 
-        />
-          {/* ✅ Admin route - ONLY admins can access */}
+          {/* Admin route - ONLY admins can access */}
           <Route 
             path="/admin" 
             element={

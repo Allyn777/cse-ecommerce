@@ -1,14 +1,11 @@
+// FightingGearsOrder.jsx - SIMPLIFIED VERSION
+
 import { useNavigate, useLocation } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-// Initialize Stripe (replace with your publishable key)
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
-// --- Icon Definitions ---
+// --- Icon Definitions (keep these) ---
 const Icon = ({ path, className = "w-5 h-5", ...props }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={path} />
@@ -17,11 +14,9 @@ const Icon = ({ path, className = "w-5 h-5", ...props }) => (
 
 const LocationIcon = (props) => <Icon path="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0zM12 13a3 3 0 100-6 3 3 0 000 6z" {...props} />;
 const TruckIcon = (props) => <Icon path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414l-1.414 1.414M15 12h2.5L16 11l-2-3-4 5h-1" {...props} />;
-const TagIcon = (props) => <Icon path="M7 7h.01M7 3h.01M3 7h.01M3 3h.01M17 3h.01M21 7h.01M21 3h.01M17 21h.01M21 17h.01M14 21h.01M10 21h.01M3 17h.01M7 21h.01M21 13h.01M3 13h.01M21 10h.01M3 10h.01M7 17h.01M17 7h.01M10 3h.01M14 3h.01" {...props} />;
-const EditIcon = (props) => <Icon path="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" {...props} />;
 const ArrowLeftIcon = (props) => <Icon path="M10 19l-7-7m0 0l7-7m-7 7h18" {...props} />;
 
-// --- Product Item Component ---
+// --- Product Item Component (keep this) ---
 const ProductItem = ({ item }) => (
   <div className="grid grid-cols-12 gap-2 sm:gap-4 items-center text-sm border-t border-gray-200 pt-3 mt-3">
     <div className="col-span-8 sm:col-span-6 flex items-center space-x-3">
@@ -59,76 +54,14 @@ const ProductItem = ({ item }) => (
   </div>
 );
 
-// --- Stripe Payment Form Component ---
-const StripePaymentForm = ({ onPaymentSuccess, amount, disabled }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState(null);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    
-    if (!stripe || !elements) return;
-    
-    setProcessing(true);
-    setError(null);
-
-    const cardElement = elements.getElement(CardElement);
-
-    const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement,
-    });
-
-    if (stripeError) {
-      setError(stripeError.message);
-      setProcessing(false);
-      return;
-    }
-
-    // Pass payment method to parent component
-    onPaymentSuccess(paymentMethod);
-    setProcessing(false);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-4 border border-gray-300 rounded-lg bg-white">
-        <CardElement
-          options={{
-            style: {
-              base: {
-                fontSize: '16px',
-                color: '#424770',
-                '::placeholder': {
-                  color: '#aab7c4',
-                },
-              },
-              invalid: {
-                color: '#9e2146',
-              },
-            },
-          }}
-        />
-      </div>
-      {error && (
-        <div className="text-red-600 text-sm">{error}</div>
-      )}
-    </form>
-  );
-};
-
 // --- Main Checkout Component ---
 const FightingGearsOrder = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' or 'stripe'
   const [userProfile, setUserProfile] = useState(null);
   const [shippingAddress, setShippingAddress] = useState({
     name: '',
@@ -140,7 +73,6 @@ const FightingGearsOrder = () => {
   });
   const [customerNotes, setCustomerNotes] = useState('');
 
-  // Fetch cart items and user profile
   useEffect(() => {
     if (user) {
       fetchCartItems();
@@ -194,7 +126,6 @@ const FightingGearsOrder = () => {
     }
   };
 
-  // Calculate totals
   const calculateSubtotal = () => {
     return cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
   };
@@ -203,7 +134,6 @@ const FightingGearsOrder = () => {
   const subtotal = calculateSubtotal();
   const totalAmount = subtotal + shippingFee;
 
-  // Generate order number
   const generateOrderNumber = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -211,7 +141,7 @@ const FightingGearsOrder = () => {
     return `FG-${year}-${random}`;
   };
 
-  // Handle place order
+  // Handle place order - ONLY Stripe now
   const handlePlaceOrder = async () => {
     // Validation
     if (!shippingAddress.name || !shippingAddress.phone || !shippingAddress.address) {
@@ -240,10 +170,11 @@ const FightingGearsOrder = () => {
           total_amount: totalAmount,
           status: 'pending',
           payment_status: 'pending',
-          payment_method: paymentMethod,
+          payment_method: 'stripe', // Always stripe
           shipping_address: shippingAddress,
           billing_address: shippingAddress,
-          customer_notes: customerNotes
+          customer_notes: customerNotes,
+          currency: 'PHP'
         })
         .select()
         .single();
@@ -270,27 +201,9 @@ const FightingGearsOrder = () => {
 
       if (itemsError) throw itemsError;
 
-      // If COD, mark as confirmed
-      if (paymentMethod === 'cod') {
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ status: 'confirmed' })
-          .eq('id', order.id);
-
-        if (updateError) throw updateError;
-
-        // Clear cart
-        await supabase
-          .from('cart_items')
-          .delete()
-          .eq('user_id', user.id);
-
-        alert('Order placed successfully! You will receive your order via Cash on Delivery.');
-        navigate('/profile');
-      } else {
-        // Stripe payment - redirect to payment processing
-        navigate(`/payment/${order.id}`);
-      }
+      // Redirect to payment page
+      console.log('Order created, redirecting to payment:', order.id);
+      navigate(`/payment/${order.id}`);
 
     } catch (error) {
       console.error('Error placing order:', error);
@@ -321,26 +234,19 @@ const FightingGearsOrder = () => {
           </button>
           
           <div className="flex items-center space-x-2">
-            <h1 className="text-lg font-semibold truncate">Welcome to Fighting Gears</h1>
+            <h1 className="text-lg font-semibold truncate">Checkout</h1>
             <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0">
               <img src="/logos/boxing.png" alt="Gloves" className="w-6 h-6" />
             </div>
           </div>
           
-          <button 
-            onClick={() => navigate('/wishlists')}
-            className="text-white hover:text-gray-300 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+          <div className="w-6"></div> {/* Spacer for balance */}
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto w-full p-4 sm:p-6 flex-grow">    
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-6">Checkout</h2>
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-6">Complete Your Order</h2>
 
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           
@@ -358,14 +264,16 @@ const FightingGearsOrder = () => {
                   placeholder="Full Name"
                   value={shippingAddress.name}
                   onChange={(e) => setShippingAddress({...shippingAddress, name: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full p-3 border border-gray-300 rounded-md text-sm"
+                  required
                 />
                 <input
                   type="tel"
                   placeholder="Phone Number"
                   value={shippingAddress.phone}
                   onChange={(e) => setShippingAddress({...shippingAddress, phone: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full p-3 border border-gray-300 rounded-md text-sm"
+                  required
                 />
               </div>
               <input
@@ -373,7 +281,8 @@ const FightingGearsOrder = () => {
                 placeholder="Street Address"
                 value={shippingAddress.address}
                 onChange={(e) => setShippingAddress({...shippingAddress, address: e.target.value})}
-                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-3 border border-gray-300 rounded-md text-sm"
+                required
               />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input
@@ -381,21 +290,21 @@ const FightingGearsOrder = () => {
                   placeholder="City"
                   value={shippingAddress.city}
                   onChange={(e) => setShippingAddress({...shippingAddress, city: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full p-3 border border-gray-300 rounded-md text-sm"
                 />
                 <input
                   type="text"
                   placeholder="Province"
                   value={shippingAddress.province}
                   onChange={(e) => setShippingAddress({...shippingAddress, province: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full p-3 border border-gray-300 rounded-md text-sm"
                 />
                 <input
                   type="text"
                   placeholder="Zip Code"
                   value={shippingAddress.zip}
                   onChange={(e) => setShippingAddress({...shippingAddress, zip: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full p-3 border border-gray-300 rounded-md text-sm"
                 />
               </div>
             </div>
@@ -418,12 +327,12 @@ const FightingGearsOrder = () => {
               
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <label htmlFor="seller-message" className="text-sm font-medium text-gray-600 block mb-2">
-                  Message for seller:
+                  Message for seller: (Optional)
                 </label>
                 <input
                   id="seller-message"
                   type="text"
-                  placeholder="Optional: Leave a message for the seller"
+                  placeholder="Leave a message for the seller"
                   value={customerNotes}
                   onChange={(e) => setCustomerNotes(e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-black focus:border-black"
@@ -448,61 +357,32 @@ const FightingGearsOrder = () => {
               </div>
             </section>
 
-            {/* Payment Method */}
+            {/* Payment Method - SIMPLIFIED */}
             <section className="mt-6 pt-6 border-t border-gray-200">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Payment Method</h2>
               
-              <div className="space-y-3">
-                {/* Cash on Delivery */}
-                <label className={`flex items-center p-4 border rounded-lg cursor-pointer transition-colors ${
-                  paymentMethod === 'cod' ? 'border-black bg-gray-50' : 'border-gray-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={paymentMethod === 'cod'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-4 h-4 text-black"
-                  />
-                  <div className="ml-3 flex-1">
-                    <span className="font-semibold text-sm text-gray-900">CASH ON DELIVERY</span>
-                    <p className="text-xs text-gray-500 mt-1">Pay when you receive your order</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-blue-300">
+                    <img 
+                      src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/512px-Stripe_Logo%2C_revised_2016.svg.png" 
+                      alt="Stripe" 
+                      className="h-5"
+                    />
                   </div>
-                </label>
-
-                {/* Stripe Card Payment */}
-                <label className={`flex items-start p-4 border rounded-lg cursor-pointer transition-colors ${
-                  paymentMethod === 'stripe' ? 'border-black bg-gray-50' : 'border-gray-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="stripe"
-                    checked={paymentMethod === 'stripe'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-4 h-4 text-black mt-1"
-                  />
-                  <div className="ml-3 flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-semibold text-sm text-gray-900">CREDIT/DEBIT CARD</span>
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/512px-Stripe_Logo%2C_revised_2016.svg.png" alt="Stripe" className="h-4" />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Secure payment via Stripe</p>
-                    
-                    {paymentMethod === 'stripe' && (
-                      <div className="mt-3">
-                        <Elements stripe={stripePromise}>
-                          <StripePaymentForm 
-                            amount={totalAmount}
-                            onPaymentSuccess={(pm) => console.log('Payment method:', pm)}
-                            disabled={processing}
-                          />
-                        </Elements>
-                      </div>
-                    )}
+                  <div>
+                    <h3 className="font-bold text-gray-900">Secure Card Payment</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      You will be redirected to a secure Stripe page to enter your card details.
+                    </p>
                   </div>
-                </label>
+                </div>
+                <div className="mt-3 flex items-center text-sm text-blue-700">
+                  <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>PCI compliant & 256-bit SSL encryption</span>
+                </div>
               </div>
             </section>
           </div>
@@ -526,18 +406,29 @@ const FightingGearsOrder = () => {
               <span className="text-xl sm:text-2xl font-bold text-black">₱{totalAmount.toLocaleString()}</span>
             </div>
             
-            <div className="pt-6 flex justify-end">
+            <div className="pt-6">
               <button 
                 onClick={handlePlaceOrder}
                 disabled={processing || cartItems.length === 0}
-                className={`w-full sm:w-2/3 md:w-1/2 lg:w-1/3 bg-black text-white py-3 px-6 rounded-lg font-bold text-base transition-colors duration-200 shadow-lg ${
+                className={`w-full bg-black text-white py-4 px-6 rounded-lg font-bold text-lg transition-colors duration-200 shadow-lg flex items-center justify-center ${
                   processing || cartItems.length === 0 
                     ? 'opacity-50 cursor-not-allowed' 
                     : 'hover:bg-gray-800'
                 }`}
               >
-                {processing ? 'PROCESSING...' : 'PLACE ORDER'}
+                {processing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    PROCESSING...
+                  </>
+                ) : (
+                  'PROCEED TO PAYMENT'
+                )}
               </button>
+              
+              <p className="text-center text-sm text-gray-500 mt-3">
+                You will enter card details on the next page
+              </p>
             </div>
           </section>
         </div>
