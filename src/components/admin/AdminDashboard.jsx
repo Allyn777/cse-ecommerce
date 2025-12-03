@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import ProductsTab from "../components/admin/ProductsTab";
 import OrdersTab from "../components/admin/OrdersTab";
 import UsersTab from "../components/admin/UsersTab";
+import PaymentsTab from "../components/admin/PaymentsTab"; // ADD THIS
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -39,10 +40,10 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Tabs */}
+      {/* Tabs - ADDED PAYMENTS */}
       <nav className="bg-white border-b border-gray-200 px-4">
         <div className="max-w-7xl mx-auto flex space-x-8">
-          {["products", "orders", "users"].map(tab => (
+          {["products", "orders", "payments", "users"].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -62,6 +63,7 @@ export default function AdminDashboard() {
       <main className="max-w-7xl mx-auto py-8 px-4">
         {activeTab === "products" && <ProductsTab />}
         {activeTab === "orders" && <OrdersTab />}
+        {activeTab === "payments" && <PaymentsTab />}
         {activeTab === "users" && <UsersTab />}
       </main>
     </div>
