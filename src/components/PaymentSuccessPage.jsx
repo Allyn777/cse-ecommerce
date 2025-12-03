@@ -71,8 +71,10 @@ const PaymentSuccessPage = () => {
         return;
       }
 
-      // STEP 2: Update order to PAID & CONFIRMED
+      // STEP 2: Update order to PAID & CONFIRMED - FIXED VERSION
       console.log('🔵 STEP 2: Updating order status to PAID...');
+      console.log('🔍 Attempting update with:', { orderId, userId: user.id });
+
       const { data: updatedOrderData, error: updateError } = await supabase
         .from('orders')
         .update({
@@ -84,12 +86,21 @@ const PaymentSuccessPage = () => {
         })
         .eq('id', orderId)
         .eq('user_id', user.id)
-        .select()
-        .single();
+        .select();  // ← REMOVED .single() - THIS WAS THE FIX
+
+      console.log('📊 Update result:', { data: updatedOrderData, error: updateError });
 
       if (updateError) {
         console.error('❌ Order update failed:', updateError);
+        console.error('❌ Error code:', updateError.code);
+        console.error('❌ Error details:', updateError.details);
+        console.error('❌ Error hint:', updateError.hint);
         throw new Error(`Failed to update order: ${updateError.message}`);
+      }
+
+      if (!updatedOrderData || updatedOrderData.length === 0) {
+        console.error('❌ No rows updated - RLS may be blocking or order not found');
+        throw new Error('Order update returned no rows. Check RLS policies in Supabase.');
       }
 
       console.log('✅ Order status updated to PAID & CONFIRMED');
