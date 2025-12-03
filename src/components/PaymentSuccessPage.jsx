@@ -32,7 +32,9 @@ const PaymentSuccessPage = () => {
       console.log('🔵 User ID:', user.id);
       console.log('🔵 Payment Intent:', paymentIntent);
 
+      // ============================================================
       // STEP 1: Fetch order with items and products
+      // ============================================================
       console.log('🔵 STEP 1: Fetching order details...');
       const { data: existingOrder, error: checkError } = await supabase
         .from('orders')
@@ -71,11 +73,12 @@ const PaymentSuccessPage = () => {
         return;
       }
 
-      // STEP 2: Update order to PAID & CONFIRMED - FIXED VERSION
+      // ============================================================
+      // STEP 2: Update order to PAID & CONFIRMED
+      // ============================================================
       console.log('🔵 STEP 2: Updating order status to PAID...');
-      console.log('🔍 Attempting update with:', { orderId, userId: user.id });
 
-      const { data: updatedOrderData, error: updateError } = await supabase
+      const { data: updatedOrderArray, error: updateError } = await supabase
         .from('orders')
         .update({
           payment_status: 'paid',
@@ -86,65 +89,100 @@ const PaymentSuccessPage = () => {
         })
         .eq('id', orderId)
         .eq('user_id', user.id)
-        .select();  // ← REMOVED .single() - THIS WAS THE FIX
+        .select();
 
-      console.log('📊 Update result:', { data: updatedOrderData, error: updateError });
+      console.log('📊 Update result:', { 
+        success: !updateError, 
+        rowsAffected: updatedOrderArray?.length || 0,
+        error: updateError 
+      });
 
       if (updateError) {
         console.error('❌ Order update failed:', updateError);
         console.error('❌ Error code:', updateError.code);
-        console.error('❌ Error details:', updateError.details);
-        console.error('❌ Error hint:', updateError.hint);
+        console.error('❌ Error message:', updateError.message);
         throw new Error(`Failed to update order: ${updateError.message}`);
       }
 
-      if (!updatedOrderData || updatedOrderData.length === 0) {
-        console.error('❌ No rows updated - RLS may be blocking or order not found');
-        throw new Error('Order update returned no rows. Check RLS policies in Supabase.');
+      if (!updatedOrderArray || updatedOrderArray.length === 0) {
+        console.error('❌ Order update returned 0 rows');
+        console.error('🔍 Check RLS policies for orders table');
+        console.error('🔍 Verify user_id matches:', { orderId, userId: user.id });
+        throw new Error('Order update failed - no rows affected. Check RLS policies.');
       }
 
       console.log('✅ Order status updated to PAID & CONFIRMED');
 
+      // ============================================================
       // STEP 3: Create payment transaction record
+      // ============================================================
       console.log('🔵 STEP 3: Creating payment transaction record...');
+      
       if (paymentIntent) {
-        const transactionData = {
-          order_id: orderId,
-          transaction_id: paymentIntent,
-          payment_method: 'stripe',
-          amount: parseFloat(existingOrder.total_amount),
-          currency: existingOrder.currency || 'PHP',
-          status: 'succeeded',
-          stripe_payment_intent_id: paymentIntent,
-          stripe_charge_id: paymentIntent,
-          gateway_response: {
-            payment_intent: paymentIntent,
-            payment_intent_client_secret: paymentIntentClientSecret,
-            processed_at: new Date().toISOString(),
-            order_number: existingOrder.order_number
-          }
-        };
-
-        console.log('🔵 Transaction data:', transactionData);
-
-        const { data: transactionResult, error: transactionError } = await supabase
+        // ✅ CHECK IF TRANSACTION ALREADY EXISTS
+        const { data: existingTransaction } = await supabase
           .from('payment_transactions')
-          .insert(transactionData)
-          .select()
-          .single();
+          .select('id')
+          .eq('stripe_payment_intent_id', paymentIntent)
+          .maybeSingle(); // ← Use maybeSingle() instead of single()
 
-        if (transactionError) {
-          console.error('❌ Payment transaction insert failed:', transactionError);
-          console.error('❌ Error details:', JSON.stringify(transactionError, null, 2));
-          // Don't throw - continue with stock deduction
+        if (existingTransaction) {
+          console.log('✅ Transaction already recorded:', existingTransaction.id);
         } else {
-          console.log('✅ Payment transaction recorded:', transactionResult.id);
+          // ✅ GENERATE UNIQUE TRANSACTION ID
+          const uniqueTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          const transactionData = {
+            order_id: orderId,
+            transaction_id: uniqueTransactionId, // ← Unique ID
+            payment_method: 'stripe',
+            amount: parseFloat(existingOrder.total_amount),
+            currency: existingOrder.currency || 'PHP',
+            status: 'succeeded',
+            stripe_payment_intent_id: paymentIntent,
+            stripe_charge_id: paymentIntent,
+            gateway_response: {
+              payment_intent: paymentIntent,
+              payment_intent_client_secret: paymentIntentClientSecret,
+              processed_at: new Date().toISOString(),
+              order_number: existingOrder.order_number
+            }
+          };
+
+          console.log('🔵 Transaction data:', {
+            order_id: transactionData.order_id,
+            transaction_id: transactionData.transaction_id,
+            amount: transactionData.amount,
+            currency: transactionData.currency
+          });
+
+          const { data: transactionResult, error: transactionError } = await supabase
+            .from('payment_transactions')
+            .insert(transactionData)
+            .select();
+
+          if (transactionError) {
+            console.error('❌ Payment transaction insert failed:', transactionError);
+            console.error('❌ Error code:', transactionError.code);
+            console.error('❌ Error message:', transactionError.message);
+            console.error('❌ Error details:', JSON.stringify(transactionError, null, 2));
+            
+            // 🔥 DON'T THROW - Log warning but continue
+            console.warn('⚠️ Payment transaction failed but order is still valid');
+          } else if (transactionResult && transactionResult.length > 0) {
+            console.log('✅✅✅ Payment transaction recorded:', transactionResult[0].id);
+            console.log('✅ Transaction ID:', transactionResult[0].transaction_id);
+          } else {
+            console.warn('⚠️ Transaction insert returned no data');
+          }
         }
       } else {
         console.warn('⚠️ No payment intent - skipping transaction record');
       }
 
+      // ============================================================
       // STEP 4: Deduct stock from products
+      // ============================================================
       console.log('🔵 STEP 4: Deducting product stock...');
       if (existingOrder.order_items && existingOrder.order_items.length > 0) {
         let stockUpdateCount = 0;
@@ -191,7 +229,9 @@ const PaymentSuccessPage = () => {
         console.log(`✅ Stock updated for ${stockUpdateCount}/${existingOrder.order_items.length} items`);
       }
 
+      // ============================================================
       // STEP 5: Clear user's cart
+      // ============================================================
       console.log('🔵 STEP 5: Clearing user cart...');
       try {
         const { error: cartError } = await supabase
@@ -208,7 +248,9 @@ const PaymentSuccessPage = () => {
         console.warn('⚠️ Cart error:', cartErr);
       }
 
+      // ============================================================
       // STEP 6: Fetch final order state
+      // ============================================================
       console.log('🔵 STEP 6: Fetching final order state...');
       const { data: finalOrder, error: fetchError } = await supabase
         .from('orders')
