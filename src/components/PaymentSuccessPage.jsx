@@ -33,11 +33,8 @@ const PaymentSuccessPage = () => {
       console.log('🔵 User ID:', user.id);
       console.log('🔵 Payment Intent:', paymentIntent);
       console.log('🔵 Redirect Status:', redirectStatus);
-      console.log('🔵 URL Search Params:', window.location.search);
 
-      // ============================================================
       // STEP 1: Fetch order with items and products
-      // ============================================================
       console.log('🔵 STEP 1: Fetching order details...');
       const { data: existingOrder, error: checkError } = await supabase
         .from('orders')
@@ -66,9 +63,8 @@ const PaymentSuccessPage = () => {
 
       console.log('✅ Order fetched:', existingOrder.order_number);
       console.log('🔵 Current payment status:', existingOrder.payment_status);
-      console.log('🔵 Current order status:', existingOrder.status);
 
-      // Check if already processed (prevent double processing)
+      // Check if already processed
       if (existingOrder.payment_status === 'paid') {
         console.log('⚠️ Order already marked as paid, skipping processing');
         setOrder(existingOrder);
@@ -76,11 +72,8 @@ const PaymentSuccessPage = () => {
         return;
       }
 
-      // ============================================================
       // STEP 2: Update order to PAID & CONFIRMED
-      // ============================================================
       console.log('🔵 STEP 2: Updating order status to PAID...');
-
       const { data: updatedOrderArray, error: updateError } = await supabase
         .from('orders')
         .update({
@@ -94,50 +87,36 @@ const PaymentSuccessPage = () => {
         .eq('user_id', user.id)
         .select();
 
-      console.log('📊 Update result:', { 
-        success: !updateError, 
-        rowsAffected: updatedOrderArray?.length || 0,
-        error: updateError 
-      });
-
       if (updateError) {
         console.error('❌ Order update failed:', updateError);
-        console.error('❌ Error code:', updateError.code);
-        console.error('❌ Error message:', updateError.message);
         throw new Error(`Failed to update order: ${updateError.message}`);
       }
 
       if (!updatedOrderArray || updatedOrderArray.length === 0) {
         console.error('❌ Order update returned 0 rows');
-        console.error('🔍 Check RLS policies for orders table');
-        console.error('🔍 Verify user_id matches:', { orderId, userId: user.id });
         throw new Error('Order update failed - no rows affected. Check RLS policies.');
       }
 
       console.log('✅ Order status updated to PAID & CONFIRMED');
 
-      // ============================================================
       // STEP 3: Create payment transaction record
-      // ============================================================
       console.log('🔵 STEP 3: Creating payment transaction record...');
       
       if (paymentIntent) {
-        // ✅ CHECK IF TRANSACTION ALREADY EXISTS
         const { data: existingTransaction } = await supabase
           .from('payment_transactions')
           .select('id')
           .eq('stripe_payment_intent_id', paymentIntent)
-          .maybeSingle(); // ← Use maybeSingle() instead of single()
+          .maybeSingle();
 
         if (existingTransaction) {
           console.log('✅ Transaction already recorded:', existingTransaction.id);
         } else {
-          // ✅ GENERATE UNIQUE TRANSACTION ID
           const uniqueTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           
           const transactionData = {
             order_id: orderId,
-            transaction_id: uniqueTransactionId, // ← Unique ID
+            transaction_id: uniqueTransactionId,
             payment_method: 'stripe',
             amount: parseFloat(existingOrder.total_amount),
             currency: existingOrder.currency || 'PHP',
@@ -152,12 +131,7 @@ const PaymentSuccessPage = () => {
             }
           };
 
-          console.log('🔵 Transaction data:', {
-            order_id: transactionData.order_id,
-            transaction_id: transactionData.transaction_id,
-            amount: transactionData.amount,
-            currency: transactionData.currency
-          });
+          console.log('🔵 Transaction data:', transactionData.transaction_id);
 
           const { data: transactionResult, error: transactionError } = await supabase
             .from('payment_transactions')
@@ -166,26 +140,16 @@ const PaymentSuccessPage = () => {
 
           if (transactionError) {
             console.error('❌ Payment transaction insert failed:', transactionError);
-            console.error('❌ Error code:', transactionError.code);
-            console.error('❌ Error message:', transactionError.message);
-            console.error('❌ Error details:', JSON.stringify(transactionError, null, 2));
-            
-            // 🔥 DON'T THROW - Log warning but continue
             console.warn('⚠️ Payment transaction failed but order is still valid');
           } else if (transactionResult && transactionResult.length > 0) {
             console.log('✅✅✅ Payment transaction recorded:', transactionResult[0].id);
-            console.log('✅ Transaction ID:', transactionResult[0].transaction_id);
-          } else {
-            console.warn('⚠️ Transaction insert returned no data');
           }
         }
       } else {
         console.warn('⚠️ No payment intent - skipping transaction record');
       }
 
-      // ============================================================
       // STEP 4: Deduct stock from products
-      // ============================================================
       console.log('🔵 STEP 4: Deducting product stock...');
       if (existingOrder.order_items && existingOrder.order_items.length > 0) {
         let stockUpdateCount = 0;
@@ -203,9 +167,7 @@ const PaymentSuccessPage = () => {
             const newStock = Math.max(0, currentStock - item.quantity);
             const newStatus = newStock <= 0 ? 'out_of_stock' : 'active';
 
-            console.log(`🔵 Product: ${product.name}`);
-            console.log(`   📦 Stock: ${currentStock} → ${newStock}`);
-            console.log(`   🏷️  Status: ${product.status} → ${newStatus}`);
+            console.log(`🔵 Product: ${product.name}, Stock: ${currentStock} → ${newStock}`);
 
             const { data: stockUpdate, error: stockError } = await supabase
               .from('products')
@@ -215,14 +177,15 @@ const PaymentSuccessPage = () => {
                 updated_at: new Date().toISOString()
               })
               .eq('id', item.product_id)
-              .select()
-              .single();
+              .select();
 
             if (stockError) {
               console.error(`❌ Stock update failed for ${product.name}:`, stockError);
-            } else {
+            } else if (stockUpdate && stockUpdate.length > 0) {
               console.log(`✅ Stock updated for ${product.name}`);
               stockUpdateCount++;
+            } else {
+              console.warn(`⚠️ No stock update for ${product.name}`);
             }
           } catch (itemError) {
             console.error('❌ Error processing item:', itemError);
@@ -232,28 +195,20 @@ const PaymentSuccessPage = () => {
         console.log(`✅ Stock updated for ${stockUpdateCount}/${existingOrder.order_items.length} items`);
       }
 
-      // ============================================================
       // STEP 5: Clear user's cart
-      // ============================================================
       console.log('🔵 STEP 5: Clearing user cart...');
-      try {
-        const { error: cartError } = await supabase
-          .from('cart_items')
-          .delete()
-          .eq('user_id', user.id);
+      const { error: cartError } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id);
 
-        if (cartError) {
-          console.warn('⚠️ Cart clearing failed:', cartError);
-        } else {
-          console.log('✅ Cart cleared');
-        }
-      } catch (cartErr) {
-        console.warn('⚠️ Cart error:', cartErr);
+      if (cartError) {
+        console.warn('⚠️ Cart clearing failed:', cartError);
+      } else {
+        console.log('✅ Cart cleared');
       }
 
-      // ============================================================
       // STEP 6: Fetch final order state
-      // ============================================================
       console.log('🔵 STEP 6: Fetching final order state...');
       const { data: finalOrder, error: fetchError } = await supabase
         .from('orders')
@@ -268,7 +223,6 @@ const PaymentSuccessPage = () => {
 
       setOrder(finalOrder);
       console.log('✅✅✅ PAYMENT SUCCESS FLOW COMPLETE ✅✅✅');
-      console.log('Final order status:', finalOrder.payment_status, finalOrder.status);
       setLoading(false);
       
     } catch (err) {
@@ -326,7 +280,6 @@ const PaymentSuccessPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-black text-white py-4 px-4 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-center">
           <div className="flex items-center space-x-2">
@@ -338,18 +291,15 @@ const PaymentSuccessPage = () => {
         </div>
       </header>
 
-      {/* Success Content */}
       <main className="max-w-2xl mx-auto p-4 sm:p-6 py-12">
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
           
-          {/* Success Icon */}
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
             <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
             </svg>
           </div>
           
-          {/* Success Message */}
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
             Payment Successful! 🎉
           </h1>
@@ -357,7 +307,6 @@ const PaymentSuccessPage = () => {
             Thank you for your purchase! Your order has been confirmed and is being processed.
           </p>
 
-          {/* Order Details */}
           <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Order Details</h2>
             <div className="space-y-3">
@@ -388,7 +337,6 @@ const PaymentSuccessPage = () => {
             </div>
           </div>
 
-          {/* What's Next */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 text-left">
             <h3 className="text-lg font-bold text-blue-900 mb-3">What's Next?</h3>
             <ul className="space-y-2 text-sm text-blue-800">
@@ -419,7 +367,6 @@ const PaymentSuccessPage = () => {
             </ul>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => navigate('/profilepage')}
@@ -436,7 +383,6 @@ const PaymentSuccessPage = () => {
           </div>
         </div>
 
-        {/* Need Help Section */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-600 mb-2">Need help with your order?</p>
           <a 
@@ -448,7 +394,6 @@ const PaymentSuccessPage = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="bg-black text-white py-6 px-4 mt-12">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-xs sm:text-sm">© 2025 Fighting Gears. All rights reserved.</p>
